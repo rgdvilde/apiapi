@@ -1,57 +1,12 @@
 const mongoose = require('mongoose')
 const { get: getProp, set: setProp } = require('lodash')
-const RedisService = require('../../services/redis.service')
+const OrionService = require('../../services/orion.service')
 const HttpService = require('../../services/http.service')
 
 const PATH_TYPES = {
   PATH: 'path',
   CONSTANT: 'constant'
 }
-
-// const defaultPathValue = {
-//   id: {
-//     type: PATH_TYPES.PATH,
-//     value: ''
-//   },
-//   organization: {
-//     type: PATH_TYPES.PATH,
-//     value: ''
-//   },
-//   reference: {
-//     type: PATH_TYPES.PATH,
-//     value: ''
-//   },
-//   application: {
-//     type: PATH_TYPES.PATH,
-//     value: ''
-//   },
-//   types: {
-//     type: PATH_TYPES.CONSTANT,
-//     value: [
-//       {
-//         name: '',
-//         application: '',
-//         description: ''
-//       }
-//     ]
-//   },
-//   categories: {
-//     type: PATH_TYPES.CONSTANT,
-//     value: ['']
-//   },
-//   longitude: {
-//     type: PATH_TYPES.PATH,
-//     value: ''
-//   },
-//   latitude: {
-//     type: PATH_TYPES.PATH,
-//     value: ''
-//   },
-//   meta: {
-//     type: PATH_TYPES.PATH,
-//     value: ''
-//   }
-// }
 
 module.exports.PATH_TYPES = PATH_TYPES
 
@@ -113,10 +68,10 @@ ApiSchema.methods.raw = async function getRawData () {
 }
 
 ApiSchema.methods.invoke = function invokeApi (model) {
-  return RedisService.getData(this.name).then((cachedResponse) => {
-    if (cachedResponse) {
+  return OrionService.getData(this.name).then((cachedResponse) => {
+/*    if (cachedResponse) {
       return JSON.parse(cachedResponse)
-    }
+    }*/
     const client = new HttpService(this.url, this.customHeaders)
     const prom = this.requestMethod === 'get'
       ? client.get()
@@ -128,7 +83,6 @@ ApiSchema.methods.invoke = function invokeApi (model) {
       const allData = data.map((rawDataElement) => {
         // rawDataElement = data element coming from api
         // should be mapped to an object which paths come from model
-
         return this.paths.reduce((acc, { toPath: pathName, value: pathValue, type: pathType }) => {
           if (pathType === PATH_TYPES.CONSTANT) {
             setProp(acc, pathName, pathValue)
@@ -139,7 +93,10 @@ ApiSchema.methods.invoke = function invokeApi (model) {
           return acc
         }, {})
       })
-      RedisService.setData(this.name, JSON.stringify(allData))
+      console.log(JSON.stringify(allData))
+      console.log(this.name)
+      /*
+      OrionService.setData(this.name, JSON.stringify(allData))*/
       return allData
     })
   })
