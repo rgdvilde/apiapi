@@ -191,6 +191,7 @@ export default {
       this.$refs.form.reset()
     },
     validate () {
+      console.log('VALIDATING')
       if (this.$refs.form.validate()) {
         this.loadingData = true
         fetch(`${process.env.baseUrl}/api/proxy/${btoa(this.url)}`)
@@ -220,9 +221,19 @@ export default {
       if (!success) {
         this.dialogVisible = false
       } else {
+        this.apiData.paths = this.apiData.paths.filter((el) => {
+          if ('type' in el) {
+            if (el.type.length > 0) {
+              return true
+            }
+          }
+          return false
+        })
+        console.log(this.apiData)
         this.create(this.apiData).then((result) => {
           if (!result) {
             // TODO: handle error
+            console.log('CREATION FAILED')
           }
           this.dialogVisible = false
           /* params: { id: this.forCollection } */

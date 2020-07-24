@@ -114,9 +114,10 @@ ApiSchema.methods.raw = async function getRawData () {
 
 ApiSchema.methods.invoke = function invokeApi (model) {
   return RedisService.getData(this.name).then((cachedResponse) => {
-    if (cachedResponse) {
+/*    if (cachedResponse) {
+      
       return JSON.parse(cachedResponse)
-    }
+    }*/
     const client = new HttpService(this.url, this.customHeaders)
     const prom = this.requestMethod === 'get'
       ? client.get()
