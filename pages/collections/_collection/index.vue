@@ -3,10 +3,16 @@
     <h1 v-text="collection.name"
         class="mb-5" />
     <p v-text="collection.description" />
+    <p>
+      This collection maps to <router-link :to="{ name: 'models-model', params: { model: collection.model._id } }">
+        {{ collection.model.name }}
+      </router-link>
+    </p>
     <v-row>
       <v-col lg="8">
         <api-list :collection-id="collection._id"
-                  :apis="collection.apis" />
+                  :apis="collection.apis"
+                  :uploads="collection.uploads" />
       </v-col>
     </v-row>
   </v-container>
