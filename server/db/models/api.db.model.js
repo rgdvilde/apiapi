@@ -1,7 +1,13 @@
+const fs = require('fs')
 const mongoose = require('mongoose')
 const { get: getProp, set: setProp } = require('lodash')
+const RMLMapperWrapper = require('@rmlio/rmlmapper-java-wrapper')
 const RedisService = require('../../services/redis.service')
 const HttpService = require('../../services/http.service')
+
+const rmlmapperPath = './rmlmapper.jar'
+const tempFolderPath = './tmp'
+// const rml = fs.readFileSync('./ngsimapping.ttl', 'utf-8')
 
 const PATH_TYPES = {
   PATH: 'path',
@@ -41,6 +47,10 @@ const ApiSchema = new mongoose.Schema({
       default: ''
     }
   }],
+  rml: {
+    type: String,
+    default: ''
+  },
   dataPath: {
     type: String,
     default: ''
@@ -69,9 +79,9 @@ ApiSchema.methods.raw = async function getRawData () {
 
 ApiSchema.methods.invoke = function invokeApi (model) {
   return RedisService.getData(this.name).then((cachedResponse) => {
-    if (cachedResponse) {
-      return JSON.parse(cachedResponse)
-    }
+    // if (cachedResponse) {
+    //   return JSON.parse(cachedResponse)
+    // }
     const client = new HttpService(this.url, this.customHeaders)
     const prom = this.requestMethod === 'get'
       ? client.get()
@@ -79,23 +89,35 @@ ApiSchema.methods.invoke = function invokeApi (model) {
 
     return prom.then(({ data: response }) => {
       const data = !this.dataPath ? response : getProp(response, this.dataPath)
+      rml = this.rml
+      if (rml == '') {
+        console.log('MAPPING NON RML')
+        const allData = data.map((rawDataElement) => {
+          // rawDataElement = data element coming from api
+          // should be mapped to an object which paths come from model
 
-      const allData = data.map((rawDataElement) => {
-        // rawDataElement = data element coming from api
-        // should be mapped to an object which paths come from model
-
-        return this.paths.reduce((acc, { toPath: pathName, value: pathValue, type: pathType }) => {
-          if (pathType === PATH_TYPES.CONSTANT) {
-            setProp(acc, pathName, pathValue)
-          } else if (pathType === PATH_TYPES.PATH) {
-            const fetchedData = getProp(rawDataElement, pathValue)
-            setProp(acc, pathName, fetchedData)
-          }
-          return acc
-        }, {})
-      })
-      RedisService.setData(this.name, JSON.stringify(allData))
-      return allData
+          return this.paths.reduce((acc, { toPath: pathName, value: pathValue, type: pathType }) => {
+            if (pathType === PATH_TYPES.CONSTANT) {
+              setProp(acc, pathName, pathValue)
+            } else if (pathType === PATH_TYPES.PATH) {
+              const fetchedData = getProp(rawDataElement, pathValue)
+              setProp(acc, pathName, fetchedData)
+            }
+            return acc
+          }, {})
+        })
+        return allData
+      } else {
+        console.log('MAPPING RML')
+        const wrapper = new RMLMapperWrapper(rmlmapperPath, tempFolderPath, true)
+        const sources = {
+          'donkeyrepublic.json': fs.readFileSync('./donkeyrepublic.json', 'utf-8')
+        }
+        fs.writeFileSync('./donkeyrepublic.json', JSON.stringify(data))
+        return wrapper.execute(rml, { sources, generateMetadata: false, serialization: 'jsonld' }).then((result) => {
+          return JSON.parse(result.output)
+        })
+      }
     })
   })
 }

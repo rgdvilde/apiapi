@@ -82,9 +82,19 @@
         v-if="basePathSelectorVisible"
         @change="setBasePath" />
     </v-container>
-
-    <device-stepper
+    <v-container
       v-if="validated"
+      fluid>
+      <v-select
+        :items="mappings"
+        @change="selectMapper"
+        label="Standard" />
+    </v-container>
+    <rml-editor
+      v-if="mapMode === 'RML'"
+      @complete="rmlCompleted" />
+    <device-stepper
+      v-if="mapMode === 'Mapper'"
       :model="collection.model"
       @complete="pathsCompleted" />
     <confirm-creation-dialog
@@ -107,6 +117,7 @@ import { get as getProp } from 'lodash'
 import CustomHeaderInput from '~/components/CustomHeaderInput.vue'
 import ConfirmCreationDialog from '~/components/ConfirmCreationDialog.vue'
 import DeviceStepper from '~/components/DeviceStepper.vue'
+import RmlEditor from '~/components/RmlEditor.vue'
 import { mutationTypes, actionTypes, getterTypes as apiGetters } from '~/store/api'
 import { getterTypes as collectionGetters, actionTypes as collectionActions } from '~/store/collections'
 import page from '~/mixins/page'
@@ -116,7 +127,8 @@ export default {
   components: {
     CustomHeaderInput,
     DeviceStepper,
-    ConfirmCreationDialog
+    ConfirmCreationDialog,
+    RmlEditor
   },
   mixins: [page],
   head () {
@@ -144,9 +156,11 @@ export default {
       loadingData: false,
       devicePaths: false,
       dialogVisible: false,
+      mapMode: false,
       basePath: '',
       basePathSelectorVisible: false,
-      forCollection: this.$route.params.collection
+      forCollection: this.$route.params.collection,
+      mappings: ['Mapper', 'RML']
     }
   },
   computed: {
@@ -156,7 +170,8 @@ export default {
         url: this.url,
         name: this.name,
         authMethod: this.authMethod,
-        forCollection: this.forCollection
+        forCollection: this.forCollection,
+        rml: this.rml
       }
       if (this.basePathSelectorVisible) {
         data.dataPath = this.basePath
@@ -212,9 +227,15 @@ export default {
         this.customHeaders = 0
       }
     },
+    selectMapper (input) {
+      this.mapMode = input
+    },
     pathsCompleted (paths) {
       this.devicePaths = paths
       this.dialogVisible = true
+    },
+    rmlCompleted (rml) {
+      this.rml = rml
     },
     submitted (success) {
       if (!success) {

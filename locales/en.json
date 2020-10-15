@@ -16,7 +16,8 @@
     "submit": "Submit",
     "validate": "Validate",
     "save": "Save",
-    "format": "Format"
+    "format": "Format",
+    "submitRML": "Submit RML"
   },
   "adjective": "adjective",
   "api": "API | APIs | {count} APIs",

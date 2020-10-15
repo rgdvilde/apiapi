@@ -7,12 +7,16 @@ module.exports = {
     return ApiModel.getAll().then((allApis) => {
       const resultPromises = map(allApis, api => api.invoke())
       return Promise.all(resultPromises)
-    }).then(allResults => res.json(flatten(allResults))).catch(next)
+    }).then(allResults => res.send(allResults)).catch(next)
   },
   getForCollection (req, res, next) {
     const { id: collectionId } = req.params
     CollectionModel.findById(collectionId).then((doc) => {
-      doc.invokeApis().then(result => res.json(result))
+      doc.invokeApis().then((result) => {
+        console.log(result)
+        res.set('Content-Type', 'application/ld+json')
+        res.json(result)
+      })
     }).catch(next)
   },
   getFromApi (req, res, next) {
