@@ -97,6 +97,8 @@
       v-if="mapMode === 'Mapper'"
       :model="collection.model"
       @complete="pathsCompleted" />
+    <constraints-validator
+      :output="validationoutput" />
     <confirm-creation-dialog
       ref="confirmDialog"
       v-if="dialogVisible"
@@ -116,11 +118,14 @@ import { mapGetters, mapActions, mapMutations } from 'vuex'
 import { get as getProp } from 'lodash'
 import CustomHeaderInput from '~/components/CustomHeaderInput.vue'
 import ConfirmCreationDialog from '~/components/ConfirmCreationDialog.vue'
+import ConstraintsValidator from '~/components/ConstraintsValidator.vue'
 import DeviceStepper from '~/components/DeviceStepper.vue'
 import RmlEditor from '~/components/RmlEditor.vue'
 import { mutationTypes, actionTypes, getterTypes as apiGetters } from '~/store/api'
 import { getterTypes as collectionGetters, actionTypes as collectionActions } from '~/store/collections'
 import page from '~/mixins/page'
+import SHACLValidator from '~/node_modules/shacl-js/shacl.js'
+import RMLMapperWrapper from '~/node_modules/@rmlio/rmlmapper-java-wrapper/lib/wrapper.js'
 
 export default {
   name: 'ApiCreate',
@@ -128,7 +133,8 @@ export default {
     CustomHeaderInput,
     DeviceStepper,
     ConfirmCreationDialog,
-    RmlEditor
+    RmlEditor,
+    ConstraintsValidator
   },
   mixins: [page],
   head () {
@@ -236,6 +242,26 @@ export default {
     },
     rmlCompleted (rml) {
       this.rml = rml
+      const rmlmapperPath = './rmlmapper.jar'
+      const tempFolderPath = './tmp'
+      const validator = new SHACLValidator()
+      const shapes = this.model.shacl
+      console.log('MAPPING RML')
+      const wrapper = new RMLMapperWrapper(rmlmapperPath, tempFolderPath, true)
+      const sources = {
+        'data.json': JSON.stringify(this.apiData)
+      }
+
+      return wrapper.execute(rml, { sources, generateMetadata: false, serialization: 'jsonld' }).then((result) => {
+        validator.validate(JSON.parse(result.output), 'application/ld+json', shapes, 'text/turtle', function (e, report) {
+          console.log('Conforms? ' + report.conforms())
+          if (report.conforms() === false) {
+            report.results().forEach(function (result) {
+              console.log(' - Severity: ' + result.severity() + ' for ' + result.sourceConstraintComponent())
+            })
+          }
+        })
+      })
     },
     submitted (success) {
       if (!success) {

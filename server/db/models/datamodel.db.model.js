@@ -6,6 +6,10 @@ const DataModelSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  shacl: {
+    type: String,
+    required: false
+  },
   description: {
     type: String,
     required: true

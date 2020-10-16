@@ -37,6 +37,12 @@
         </v-card>
       </v-col>
     </v-row>
+    <v-col lg="8">
+      <shacl-editor
+        @complete="shaclCompleted" />
+    </v-col>
+    </v-row>
+    </v-row>
     <v-row justify="end">
       <v-col lg="1">
         <v-btn v-t="'actions.save'"
@@ -51,13 +57,14 @@
 <script>
 import { mapActions } from 'vuex'
 import JsonEditor from '../../components/JsonEditor'
+import ShaclEditor from '../../components/ShaclEditor'
 import ModelPropertySelector from '../../components/ModelPropertySelector'
 import { actionTypes } from '../../store/models/types'
 import page from '~/mixins/page'
 
 export default {
   name: 'ModelCreate',
-  components: { ModelPropertySelector, JsonEditor },
+  components: { ModelPropertySelector, JsonEditor, ShaclEditor },
   mixins: [page],
   data () {
     return {
@@ -73,6 +80,7 @@ export default {
         'longitude': 3.704006,
         'latitude': 51.050938
       },
+      shacl: '',
       dataPaths: [],
       modelName: '',
       modelDescription: ''
@@ -89,11 +97,16 @@ export default {
     updateDataPaths (paths) {
       this.dataPaths = paths
     },
+    shaclCompleted (shacl) {
+      console.log(shacl)
+      this.shacl = shacl
+    },
     savePaths () {
       this.saveDataPaths({
         paths: this.dataPaths,
         name: this.modelName,
-        description: this.modelDescription
+        description: this.modelDescription,
+        shacl: this.shacl
       }).then(() => {
         this.$router.push({ name: 'index' })
       })
