@@ -111,9 +111,8 @@ ApiSchema.methods.invoke = function invokeApi (model) {
         console.log('MAPPING RML')
         const wrapper = new RMLMapperWrapper(rmlmapperPath, tempFolderPath, true)
         const sources = {
-          'donkeyrepublic.json': fs.readFileSync('./donkeyrepublic.json', 'utf-8')
+          'data.json': JSON.stringify(data)
         }
-        fs.writeFileSync('./donkeyrepublic.json', JSON.stringify(data))
         return wrapper.execute(rml, { sources, generateMetadata: false, serialization: 'jsonld' }).then((result) => {
           return JSON.parse(result.output)
         })
