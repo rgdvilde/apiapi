@@ -8,12 +8,18 @@
         <model-list :models="models" />
       </v-col>
     </v-row>
+    <v-row justify="start">
+      <v-col lg="8">
+        <foreign-collection-list :collections="foreignCollections" />
+      </v-col>
+    </v-row>
   </v-container>
 </template>
 
 <script>
 import { mapGetters } from 'vuex'
 import CollectionList from '../components/organisms/CollectionList'
+import ForeignCollectionList from '../components/organisms/ForeignCollectionList'
 import { actionTypes, getterTypes } from '../store/collections/types'
 import { getterTypes as modelGetters } from '../store/models/types'
 import ModelList from '../components/organisms/ModelList'
@@ -21,7 +27,7 @@ import page from '~/mixins/page'
 
 export default {
   name: 'Home',
-  components: { ModelList, CollectionList },
+  components: { ModelList, CollectionList, ForeignCollectionList },
   mixins: [page],
   head () {
     return {
