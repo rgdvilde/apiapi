@@ -158,7 +158,7 @@ export default {
       apiKey: '',
       validated: false,
       loadingData: false,
-      devicePaths: false,
+      devicePaths: {},
       dialogVisible: false,
       mapMode: false,
       basePath: '',
@@ -254,9 +254,16 @@ export default {
         })
           .then(data => data.json())
           .then((json) => {
+            if (JSON.stringify(json) === 'true') {
+              this.dialogVisible = true
+            } else {
+              this.dialogVisible = false
+            }
             this.mapValidation = JSON.stringify(json)
           })
           .catch(err => console.error(err))
+      } else {
+        this.dialogVisible = true
       }
     },
     submitted (success) {

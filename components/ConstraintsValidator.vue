@@ -1,9 +1,9 @@
 <template>
   <div class="constraintsvalidator">
     <v-textarea
+      :value="output"
       name="input-7-1"
       label="Default style"
-      :value="output"
       hint="Enter Shacl" />
   </div>
 </template>
