@@ -98,7 +98,7 @@
       :model="collection.model"
       @complete="pathsCompleted" />
     <constraints-validator
-      :output="validationoutput" />
+      :output="mapValidation" />
     <confirm-creation-dialog
       ref="confirmDialog"
       v-if="dialogVisible"
@@ -162,6 +162,7 @@ export default {
       dialogVisible: false,
       mapMode: false,
       basePath: '',
+      mapValidation: '',
       basePathSelectorVisible: false,
       forCollection: this.$route.params.collection,
       mappings: ['Mapper', 'RML']
@@ -239,20 +240,24 @@ export default {
       this.dialogVisible = true
     },
     rmlCompleted (rml) {
-
-      fetch(`${process.env.baseUrl}/api/map/validate`, {
-        method: 'POST',
-        body: JSON.stringify(data),
-        headers: {
-          'Content-Type': 'application/json'
-          // 'Content-Type': 'application/x-www-form-urlencoded',
-        }        
-      })
-        .then(data => data.json())
-        .then((json) => {
-          console.log(json)
+      this.rml = rml
+      console.log(this.url)
+      if (this.collection.model.shacl) {
+        const data = { 'shacl': this.collection.model.shacl, 'rml': this.rml, 'url': this.url }
+        fetch(`${process.env.baseUrl}/api/map/validate`, {
+          method: 'POST',
+          body: JSON.stringify(data),
+          headers: {
+            'Content-Type': 'application/json'
+            // 'Content-Type': 'application/x-www-form-urlencoded',
+          }
         })
-        .catch(err => console.error(err))
+          .then(data => data.json())
+          .then((json) => {
+            this.mapValidation = JSON.stringify(json)
+          })
+          .catch(err => console.error(err))
+      }
     },
     submitted (success) {
       if (!success) {

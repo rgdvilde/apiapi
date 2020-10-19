@@ -3,7 +3,7 @@
     <v-textarea
       name="input-7-1"
       label="Default style"
-      value="output"
+      :value="output"
       hint="Enter Shacl" />
   </div>
 </template>

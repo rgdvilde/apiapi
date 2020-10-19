@@ -24,6 +24,9 @@ module.exports = {
   },
   mapValidate (req, res) {
     const { url, rml, shacl: shapes } = req.body
+    console.log(url)
+    console.log(rml)
+    console.log(shapes)
     const wrapper = new RMLMapperWrapper(rmlmapperPath, tempFolderPath, true)
     axios.get(url)
       .then((response) => {
