@@ -1,7 +1,9 @@
 const fs = require('fs')
+const N3 = require('n3')
 const mongoose = require('mongoose')
 const { get: getProp, set: setProp } = require('lodash')
 const RMLMapperWrapper = require('@rmlio/rmlmapper-java-wrapper')
+const yarrrmlParser = require('@rmlio/yarrrml-parser/lib/rml-generator')
 const RedisService = require('../../services/redis.service')
 const HttpService = require('../../services/http.service')
 
@@ -51,6 +53,10 @@ const ApiSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
+  yarrrml: {
+    type: String,
+    default: ''
+  },
   dataPath: {
     type: String,
     default: ''
@@ -89,8 +95,11 @@ ApiSchema.methods.invoke = function invokeApi (model) {
 
     return prom.then(({ data: response }) => {
       const data = !this.dataPath ? response : getProp(response, this.dataPath)
-      rml = this.rml
-      if (rml == '') {
+      const { rml, yarrrml } = this
+      console.log(this)
+      console.log(rml)
+      console.log(yarrrml)
+      if (rml == '' && yarrrml == '') {
         console.log('MAPPING NON RML')
         const allData = data.map((rawDataElement) => {
           // rawDataElement = data element coming from api
@@ -107,7 +116,7 @@ ApiSchema.methods.invoke = function invokeApi (model) {
           }, {})
         })
         return allData
-      } else {
+      } else if (yarrrml == '') {
         console.log('MAPPING RML')
         const wrapper = new RMLMapperWrapper(rmlmapperPath, tempFolderPath, true)
         const sources = {
@@ -116,6 +125,25 @@ ApiSchema.methods.invoke = function invokeApi (model) {
         return wrapper.execute(rml, { sources, generateMetadata: false, serialization: 'jsonld' }).then((result) => {
           return JSON.parse(result.output)
         })
+      } else {
+        console.log('Mapping YARRRML')
+        const wrapper = new RMLMapperWrapper(rmlmapperPath, tempFolderPath, true)
+        const y2r = new yarrrmlParser()
+        const triples = y2r.convert(yarrrml)
+        const writer = new N3.Writer({})
+        writer.addQuads(triples)
+        return writer.end((error, result) => {
+          const wrapper = new RMLMapperWrapper(rmlmapperPath, tempFolderPath, true)
+          const sources = {
+            'data.json': JSON.stringify(data)
+          }
+          console.log(data)
+          return wrapper.execute(result, { sources, generateMetadata: false, serialization: 'jsonld' }).then((resp) => {
+            console.log(resp.output)
+            return JSON.parse(resp.output)
+          })
+        })
+      
       }
     })
   })

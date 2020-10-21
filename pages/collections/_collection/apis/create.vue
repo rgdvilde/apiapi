@@ -93,6 +93,9 @@
     <rml-editor
       v-if="mapMode === 'RML'"
       @complete="rmlCompleted" />
+    <yarrrml-editor
+      v-if="mapMode === 'YARRRML'"
+      @complete="yarrrmlCompleted" />
     <device-stepper
       v-if="mapMode === 'Mapper'"
       :model="collection.model"
@@ -121,6 +124,7 @@ import ConfirmCreationDialog from '~/components/ConfirmCreationDialog.vue'
 import ConstraintsValidator from '~/components/ConstraintsValidator.vue'
 import DeviceStepper from '~/components/DeviceStepper.vue'
 import RmlEditor from '~/components/RmlEditor.vue'
+import YarrrmlEditor from '~/components/YarrrmlEditor.vue'
 import { mutationTypes, actionTypes, getterTypes as apiGetters } from '~/store/api'
 import { getterTypes as collectionGetters, actionTypes as collectionActions } from '~/store/collections'
 import page from '~/mixins/page'
@@ -132,6 +136,7 @@ export default {
     DeviceStepper,
     ConfirmCreationDialog,
     RmlEditor,
+    YarrrmlEditor,
     ConstraintsValidator
   },
   mixins: [page],
@@ -165,7 +170,7 @@ export default {
       mapValidation: '',
       basePathSelectorVisible: false,
       forCollection: this.$route.params.collection,
-      mappings: ['Mapper', 'RML']
+      mappings: ['Mapper', 'RML', 'YARRRML']
     }
   },
   computed: {
@@ -176,7 +181,8 @@ export default {
         name: this.name,
         authMethod: this.authMethod,
         forCollection: this.forCollection,
-        rml: this.rml
+        rml: this.rml,
+        yarrrml: this.yarrrml
       }
       if (this.basePathSelectorVisible) {
         data.dataPath = this.basePath
@@ -243,7 +249,33 @@ export default {
       this.rml = rml
       console.log(this.url)
       if (this.collection.model.shacl) {
-        const data = { 'shacl': this.collection.model.shacl, 'rml': this.rml, 'url': this.url }
+        const data = { 'shacl': this.collection.model.shacl, 'rml': this.rml, 'url': this.url, 'mapmode': 'rml' }
+        fetch(`${process.env.baseUrl}/api/map/validate`, {
+          method: 'POST',
+          body: JSON.stringify(data),
+          headers: {
+            'Content-Type': 'application/json'
+            // 'Content-Type': 'application/x-www-form-urlencoded',
+          }
+        })
+          .then(data => data.json())
+          .then((json) => {
+            if (JSON.stringify(json) === 'true') {
+              this.dialogVisible = true
+            } else {
+              this.dialogVisible = false
+            }
+            this.mapValidation = JSON.stringify(json)
+          })
+          .catch(err => console.error(err))
+      } else {
+        this.dialogVisible = true
+      }
+    },
+    yarrrmlCompleted (yarrrml) {
+      this.yarrrml = yarrrml
+      if (this.collection.model.shacl) {
+        const data = { 'shacl': this.collection.model.shacl, 'yarrrml': this.yarrrml, 'url': this.url, 'mapmode': 'yarrrml' }
         fetch(`${process.env.baseUrl}/api/map/validate`, {
           method: 'POST',
           body: JSON.stringify(data),
@@ -270,6 +302,7 @@ export default {
       if (!success) {
         this.dialogVisible = false
       } else {
+        console.log(this.apiData)
         this.create(this.apiData).then((result) => {
           if (!result) {
             // TODO: handle error
