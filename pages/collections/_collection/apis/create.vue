@@ -125,6 +125,7 @@ import ConstraintsValidator from '~/components/ConstraintsValidator.vue'
 import DeviceStepper from '~/components/DeviceStepper.vue'
 import RmlEditor from '~/components/RmlEditor.vue'
 import YarrrmlEditor from '~/components/YarrrmlEditor.vue'
+import ShaclMapper from '~/components/ShaclMapper.vue'
 import { mutationTypes, actionTypes, getterTypes as apiGetters } from '~/store/api'
 import { getterTypes as collectionGetters, actionTypes as collectionActions } from '~/store/collections'
 import page from '~/mixins/page'
@@ -137,7 +138,8 @@ export default {
     ConfirmCreationDialog,
     RmlEditor,
     YarrrmlEditor,
-    ConstraintsValidator
+    ConstraintsValidator,
+    ShaclMapper
   },
   mixins: [page],
   head () {
