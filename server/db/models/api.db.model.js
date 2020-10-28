@@ -143,7 +143,6 @@ ApiSchema.methods.invoke = function invokeApi (model) {
             return JSON.parse(resp.output)
           })
         })
-      
       }
     })
   })

@@ -17,7 +17,7 @@
 <script>
 
 export default {
-  name: 'RmlEditor',
+  name: 'YarrrmlEditor',
   methods: {
     complete () {
       console.log(this.yarrrml)

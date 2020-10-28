@@ -101,6 +101,13 @@ module.exports = {
     ** You can extend webpack config here
     */
     extend (config, ctx) {
+      config.node = {
+        'fs': 'empty',
+        'solid-auth-cli': 'empty',
+        'child_process': 'empty',
+        'solid-auth-client': 'empty'
+
+      }
       if (ctx.isDev) {
         config.devtool = '#eval-source-map'
       }

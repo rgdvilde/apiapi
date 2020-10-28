@@ -93,6 +93,8 @@
     <rml-editor
       v-if="mapMode === 'RML'"
       @complete="rmlCompleted" />
+    <shacl-mapper v-if="mapMode === 'RMLMapper'"
+      :model="collection.model" />
     <yarrrml-editor
       v-if="mapMode === 'YARRRML'"
       @complete="yarrrmlCompleted" />
@@ -101,6 +103,7 @@
       :model="collection.model"
       @complete="pathsCompleted" />
     <constraints-validator
+      v-if="mapMode === 'RML' || mapmode === 'YARRRML'"
       :output="mapValidation" />
     <confirm-creation-dialog
       ref="confirmDialog"
@@ -172,7 +175,7 @@ export default {
       mapValidation: '',
       basePathSelectorVisible: false,
       forCollection: this.$route.params.collection,
-      mappings: ['Mapper', 'RML', 'YARRRML']
+      mappings: ['Mapper', 'RMLMapper', 'RML', 'YARRRML']
     }
   },
   computed: {
