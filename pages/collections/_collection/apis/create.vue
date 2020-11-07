@@ -93,8 +93,10 @@
     <rml-editor
       v-if="mapMode === 'RML'"
       @complete="rmlCompleted" />
-    <shacl-mapper v-if="mapMode === 'RMLMapper'"
-      :model="collection.model" />
+    <shacl-mapper-wrapper v-if="mapMode === 'RMLMapper'"
+                          :model="collection.model"
+                          :endpointData="endpointData"
+                          @complete="rmlCompleted" />
     <yarrrml-editor
       v-if="mapMode === 'YARRRML'"
       @complete="yarrrmlCompleted" />
@@ -103,7 +105,7 @@
       :model="collection.model"
       @complete="pathsCompleted" />
     <constraints-validator
-      v-if="mapMode === 'RML' || mapmode === 'YARRRML'"
+      v-if="mapMode === 'RML' || mapMode === 'YARRRML' || mapMode === 'RMLMapper'"
       :output="mapValidation" />
     <confirm-creation-dialog
       ref="confirmDialog"
@@ -128,7 +130,7 @@ import ConstraintsValidator from '~/components/ConstraintsValidator.vue'
 import DeviceStepper from '~/components/DeviceStepper.vue'
 import RmlEditor from '~/components/RmlEditor.vue'
 import YarrrmlEditor from '~/components/YarrrmlEditor.vue'
-import ShaclMapper from '~/components/ShaclMapper.vue'
+import ShaclMapperWrapper from '~/components/ShaclMapperWrapper.vue'
 import { mutationTypes, actionTypes, getterTypes as apiGetters } from '~/store/api'
 import { getterTypes as collectionGetters, actionTypes as collectionActions } from '~/store/collections'
 import page from '~/mixins/page'
@@ -142,7 +144,7 @@ export default {
     RmlEditor,
     YarrrmlEditor,
     ConstraintsValidator,
-    ShaclMapper
+    ShaclMapperWrapper
   },
   mixins: [page],
   head () {
@@ -175,7 +177,8 @@ export default {
       mapValidation: '',
       basePathSelectorVisible: false,
       forCollection: this.$route.params.collection,
-      mappings: ['Mapper', 'RMLMapper', 'RML', 'YARRRML']
+      mappings: ['Mapper', 'RMLMapper', 'RML', 'YARRRML'],
+      endpointData: ''
     }
   },
   computed: {
@@ -228,6 +231,7 @@ export default {
           .then(data => data.json())
           .then((json) => {
             this.update(json)
+            this.setData(json)
             this.loadingData = false
             this.validated = true
           })
@@ -252,7 +256,6 @@ export default {
     },
     rmlCompleted (rml) {
       this.rml = rml
-      console.log(this.url)
       if (this.collection.model.shacl) {
         const data = { 'shacl': this.collection.model.shacl, 'rml': this.rml, 'url': this.url, 'mapmode': 'rml' }
         fetch(`${process.env.baseUrl}/api/map/validate`, {
@@ -325,6 +328,9 @@ export default {
         const newData = getProp(currentData, path)
         this.update(newData)
       }
+    },
+    setData (json) {
+      this.endpointData = json
     }
   }
 }

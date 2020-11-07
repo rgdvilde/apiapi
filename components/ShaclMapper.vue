@@ -1,112 +1,178 @@
 <template>
-  <div id="app">
+  <div id="ShaclMapper">
     <div class="container">
-      <h1>vue-shacl-form</h1>
-      <v-form
-        ref="form"
-        v-model="valid"
-        lazy-validation>
-        <v-select
-          :items="targetShapes"
-          v-model="targetClass"
-          label="Standard" />
-      </v-form>
-      <v-card color="basil">
-        <v-tabs>
-          <v-tab href="#Form">
-            Form
-          </v-tab>
-          <v-tab-item value="Form">
-            <shacl-form ref="shaclForm"
-                        :shapesGraphText="shapesText"
-                        :targetClass="targetClass"
-                        :options="options"
-                        @update="onUpdate"
-                        @load="onLoad" />
-            <button @click.prevent="validate"
-                    class="btn btn-warning">
-              Validate
-            </button>
-          </v-tab-item>
+      <v-row>
+        <v-col
+          cols="12"
+          md="12">
+          <v-form>
+            <v-container>
+              <v-row>
+                <v-select
+                  v-model="filetype"
+                  :items="filetypes"
+                  label="FileType" />
+              </v-row>
+              <v-row>
+                <v-select
+                  v-model="targetClass"
+                  :items="targetShapes"
+                  item-text="uri"
+                  label="Target" />
+              </v-row>
+              <v-row>
+                <v-text-field
+                  v-model="iteratorText"
+                  label="Iterator" />
+              </v-row>
+              <v-row>
+                <v-switch
+                  v-model="toggleEndpoint"
+                  :label="`toggleEndpoint`" />
+              </v-row>
+            </v-container>
+          </v-form>
+        </v-col>
+      </v-row>
+      <v-row>
+        <v-col
+          v-if="toggleEndpoint"
+          cols="12"
+          md="5">
+          <vue-json-pretty
+            :path="'res'"
+            :data="endpointData" />
+        </v-col>
+        <hr>
+        <v-col
+          cols="12"
+          md="5">
+          <v-tabs
+            v-model="tab"
+            align-with-title>
+            <v-tab
+              :key="'form'">
+              form
+            </v-tab>
+            <v-tab
+              :key="'shapes'">
+              shapes
+            </v-tab>
+            <v-tab
+              :key="'data'">
+              data
+            </v-tab>
+          </v-tabs>
 
-          <v-tab href="#Shapes">
-            Shapes
-          </v-tab>
-          <v-tab-item value="Shapes">
-            <div class="card text-left">
-              <div class="card-body">
-                <pre v-text="shapesText" />
-              </div>
-            </div>
-          </v-tab-item>
-
-          <v-tab href="#Data">
-            Data
-          </v-tab>
-          <v-tab-item value="Data">
-            <div class="card text-left">
-              <div class="card-body">
-                <pre v-text="dataText" />
-              </div>
-            </div>
-          </v-tab-item>
-        </v-tabs>
-      </v-card>
-      <hr>
+          <v-tabs-items v-model="tab">
+            <v-tab-item
+              :key="'form'">
+              <shacl-form
+                ref="shaclForm"
+                :shapes-graph-text="shapesGraphText"
+                :target-class="targetClass"
+                :target-shapes="targetShapes"
+                :options="options"
+                :endpoint-data="endpointdata"
+                :iterator-text="iteratorText"
+                :filetype="filetype"
+                @update="onUpdate"
+                @load="onLoad" />
+            </v-tab-item>
+            <v-tab-item
+              :key="'shapes'">
+              <pre v-text="shapesGraphText" />
+            </v-tab-item>
+            <v-tab-item
+              :key="'data'">
+              <pre v-text="dataText" />
+              <v-btn
+                @click="complete"
+                color="success lighten-1"
+                class="mr-4">
+                {{ $t('actions.submitRML') }}
+              </v-btn>
+            </v-tab-item>
+          </v-tabs-items>
+        </v-col>
+      </v-row>
     </div>
   </div>
 </template>
 
 <script>
-import VueShaclForm from 'vue-shacl-form'
 import * as $rdf from 'rdflib'
+import SHACLValidator from 'shacl'
+import VueJsonPretty from 'vue-json-pretty'
+import ShaclForm from './ShaclForm'
+import 'vue-json-pretty/lib/styles.css'
+import defaultOptions from './lib/options'
 
 export default {
   name: 'ShaclMapper',
   components: {
-    'shacl-form': VueShaclForm
+    ShaclForm,
+    VueJsonPretty
   },
   props: {
-    model: {
+    shapesGraphText: {
+      type: String,
+      default: ''
+    },
+    options: {
       type: Object,
-      required: true
+      default () {
+        return {}
+      }
+    },
+    endpointData: {
+      type: Object,
+      default () {
+        return {}
+      }
     }
   },
   data () {
     return {
-      text: 'lorem ipsum',
-      items: ['Form', 'Shapes', 'Data'],
       shapeFileUri: document.location.origin + '/ngsi.ttl',
+      mergedOptions: defaultOptions,
       targetClass: '',
-      shapesText: this.model.shacl,
       dataText: '',
+      iteratorText: '$',
+      filetype: 'json',
       shapesGraph: $rdf.graph(),
       targetShapes: [],
-      options: {}
+      endpointdata: {},
+      url: 'https://data.stad.gent/api/records/1.0/search/?dataset=donkey-republic-deelfietsen-stations-locaties&q=',
+      toggleEndpoint: true,
+      filetypes: ['json'],
+      tab: 'form',
+      validator: new SHACLValidator()
     }
   },
   mounted () {
-    this.load()
   },
   methods: {
-    load () {
-      console.log(this.model)
+    validate () {
+      this.$refs.shaclForm.validate()
     },
     onUpdate (graph) {
       const serializer = $rdf.Serializer(graph)
       this.dataText = serializer.statementsToN3(graph.statements)
     },
     onLoad (shapes) {
-      console.log(shapes)
       this.targetShapes = shapes
     },
-    validate () {
-      console.log(this.$refs)
-      this.$refs.shaclForm.validate()
-    },
-    complete (data) {
-      console.log(data)
+    complete () {
+      this.$emit('complete', this.dataText)
     }
+
   }
 }
 </script>
+
+<style>
+#app {
+  font-family: 'Avenir', Helvetica, Arial, sans-serif;
+}
+</style>
