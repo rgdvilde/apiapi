@@ -13,7 +13,15 @@ module.exports = {
     const { id: collectionId } = req.params
     CollectionModel.findById(collectionId).then((doc) => {
       doc.invokeApis().then((result) => {
-        console.log(result)
+        res.set('Content-Type', 'application/ld+json')
+        res.json(result)
+      })
+    }).catch(next)
+  },
+  getForCollectionSlippyTile (req, res, next) {
+    const { id: collectionId, zoom, x, y } = req.params
+    CollectionModel.findById(collectionId).then((doc) => {
+      doc.invokeApisSlippy(zoom, x, y).then((result) => {
         res.set('Content-Type', 'application/ld+json')
         res.json(result)
       })

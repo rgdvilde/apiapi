@@ -44,6 +44,28 @@ CollectionSchema.methods.invokeApis = function invokeCollectionApis () {
     }).then(results => flattenDepth(results, 2))
 }
 
+CollectionSchema.methods.invokeApisSlippy = function invokeCollectionApisSlippy (zoom,x,y) {
+  return DataModelModel.findById(this.model)
+    .exec()
+    .then((model) => {
+      const apiPromise = ApiModel.find({
+        '_id': { $in: this.apis }
+      })
+        .exec()
+        .then((apis) => {
+          return Promise.all(apis.map(api => api.invokeSlippy(model,zoom,x,y)))
+        })
+      const uploadsPromise = UploadModel.find({
+        '_id': { $in: this.uploads }
+      })
+        .exec()
+        .then((uploads) => {
+          return Promise.all(uploads.map(up => up.invoke()))
+        })
+      return Promise.all([apiPromise, uploadsPromise])
+    }).then(results => flattenDepth(results, 2))
+}
+
 const CollectionModel = mongoose.model('Collection', CollectionSchema)
 
 module.exports = CollectionModel
