@@ -2,6 +2,7 @@ const fs = require('fs')
 const N3 = require('n3')
 const mongoose = require('mongoose')
 const { get: getProp, set: setProp } = require('lodash')
+const $rdf = require('rdflib')
 const RMLMapperWrapper = require('@rmlio/rmlmapper-java-wrapper')
 const yarrrmlParser = require('@rmlio/yarrrml-parser/lib/rml-generator')
 const RedisService = require('../../services/redis.service')
@@ -57,6 +58,10 @@ const ApiSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
+  slippy: {
+    type: Boolean,
+    default: false
+  },
   dataPath: {
     type: String,
     default: ''
@@ -85,16 +90,15 @@ ApiSchema.methods.raw = async function getRawData () {
 
 ApiSchema.methods.invoke = function invokeApi (model) {
   return RedisService.getData(this.name).then((cachedResponse) => {
-    // if (cachedResponse) {
-    //   return JSON.parse(cachedResponse)
-    // }
+    if (cachedResponse) {
+      return JSON.parse(cachedResponse)
+    }
     const client = new HttpService(this.url, this.customHeaders)
     const prom = this.requestMethod === 'get'
       ? client.get()
       : client.post(this.requestData)
 
     return prom.then(({ data: response }) => {
-
       const data = !this.dataPath ? response : getProp(response, this.dataPath)
       const { rml, yarrrml } = this
       if (rml == '' && yarrrml == '') {
@@ -112,6 +116,7 @@ ApiSchema.methods.invoke = function invokeApi (model) {
             return acc
           }, {})
         })
+        RedisService.setData(this.name, JSON.stringify(allData))
         return allData
       } else if (yarrrml == '') {
         const wrapper = new RMLMapperWrapper(rmlmapperPath, tempFolderPath, true)
@@ -119,6 +124,7 @@ ApiSchema.methods.invoke = function invokeApi (model) {
           'data.json': JSON.stringify(data)
         }
         return wrapper.execute(rml, { sources, generateMetadata: false, serialization: 'jsonld' }).then((result) => {
+          RedisService.setData(this.name, result.output)
           return JSON.parse(result.output)
         })
       } else {
@@ -133,6 +139,7 @@ ApiSchema.methods.invoke = function invokeApi (model) {
             'data.json': JSON.stringify(data)
           }
           return wrapper.execute(result, { sources, generateMetadata: false, serialization: 'jsonld' }).then((resp) => {
+            RedisService.setData(this.name, resp.output)
             return JSON.parse(resp.output)
           })
         })
@@ -147,34 +154,33 @@ ApiSchema.methods.invokeSlippy = function invokeApiSlippy (model, zoom, x, y) {
       console.log('cachedSlippy')
       return JSON.parse(cachedResponse)
     }
-    let prom =  ''
+    let prom = ''
     if (this.slippy) {
-      const client = new HttpService(this.url + '/' + zoom + '/' + x + '/' + y , this.customHeaders)
+      const client = new HttpService(this.url + '/' + zoom + '/' + x + '/' + y, this.customHeaders)
+      prom = this.requestMethod === 'get'
+        ? client.get()
+        : client.post(this.requestData)
+    } else {
+      const client = new HttpService(this.url, this.customHeaders)
       prom = this.requestMethod === 'get'
         ? client.get()
         : client.post(this.requestData)
     }
-    else {
-      const client = new HttpService(this.url, this.customHeaders)
-      prom = this.requestMethod === 'get'
-        ? client.get()
-        : client.post(this.requestData)     
-    }
-
 
     return prom.then(({ data: response }) => {
-      function lon2tile(lon,zoom) { return (Math.floor((lon+180)/360*Math.pow(2,zoom))); }
-      function lat2tile(lat,zoom)  { return (Math.floor((1-Math.log(Math.tan(lat*Math.PI/180) + 1/Math.cos(lat*Math.PI/180))/Math.PI)/2 *Math.pow(2,zoom))); }
+      console.log(response)
+      function lon2tile (lon, zoom) { return (Math.floor((lon + 180) / 360 * 2 ** zoom)) }
+      function lat2tile (lat, zoom) { return (Math.floor((1 - Math.log(Math.tan(lat * Math.PI / 180) + 1 / Math.cos(lat * Math.PI / 180)) / Math.PI) / 2 * 2 ** zoom)) }
       const filterTile = (data) => {
-        return data.filter(dp => {
-          if(!dp['https://uri.fiware.org/ns/data-models#lat'][0]['@value']){
+        return data.filter((dp) => {
+          if (!dp['https://uri.fiware.org/ns/data-models#lat'][0]['@value']) {
             return false
           }
-          if(!dp['https://uri.fiware.org/ns/data-models#lon'][0]['@value']){
+          if (!dp['https://uri.fiware.org/ns/data-models#lon'][0]['@value']) {
             return false
           }
-          const t1 = lon2tile(parseFloat(dp['https://uri.fiware.org/ns/data-models#lon'][0]['@value']),parseFloat(zoom))
-          const t2 = lat2tile(parseFloat(dp['https://uri.fiware.org/ns/data-models#lat'][0]['@value']),parseFloat(zoom))
+          const t1 = lon2tile(parseFloat(dp['https://uri.fiware.org/ns/data-models#lon'][0]['@value']), parseFloat(zoom))
+          const t2 = lat2tile(parseFloat(dp['https://uri.fiware.org/ns/data-models#lat'][0]['@value']), parseFloat(zoom))
           return t1 === parseInt(x) && t2 === parseInt(y)
         })
       }
@@ -195,11 +201,10 @@ ApiSchema.methods.invokeSlippy = function invokeApiSlippy (model, zoom, x, y) {
             return acc
           }, {})
         })
-        if (this.slippy){
+        if (this.slippy) {
           RedisService.setData(this.name + ':' + zoom + ':' + x + ':' + y, allData)
           return allData
-        }
-        else{
+        } else {
           RedisService.setData(this.name, JSON.stringify(allData))
           const slippyout = filterTile(allData)
           RedisService.setData(this.name + ':' + zoom + ':' + x + ':' + y, JSON.stringify(slippyout))
@@ -211,11 +216,10 @@ ApiSchema.methods.invokeSlippy = function invokeApiSlippy (model, zoom, x, y) {
           'data.json': JSON.stringify(data)
         }
         return wrapper.execute(rml, { sources, generateMetadata: false, serialization: 'jsonld' }).then((result) => {
-          if (this.slippy){
+          if (this.slippy) {
             RedisService.setData(this.name + ':' + zoom + ':' + x + ':' + y, result.output)
             return JSON.parse(result.output)
-          }
-          else{
+          } else {
             RedisService.setData(this.name, result.output)
             const slippyout = filterTile(JSON.parse(result.output))
             RedisService.setData(this.name + ':' + zoom + ':' + x + ':' + y, JSON.stringify(slippyout))
@@ -234,11 +238,10 @@ ApiSchema.methods.invokeSlippy = function invokeApiSlippy (model, zoom, x, y) {
             'data.json': JSON.stringify(data)
           }
           return wrapper.execute(result, { sources, generateMetadata: false, serialization: 'jsonld' }).then((resp) => {
-            if (this.slippy){
+            if (this.slippy) {
               RedisService.setData(this.name + ':' + zoom + ':' + x + ':' + y, resp.output)
               return JSON.parse(resp.output)
-            }
-            else{
+            } else {
               RedisService.setData(this.name, resp.output)
               const slippyout = filterTile(JSON.parse(resp.output))
               RedisService.setData(this.name + ':' + zoom + ':' + x + ':' + y, JSON.stringify(slippyout))

@@ -44,7 +44,7 @@ CollectionSchema.methods.invokeApis = function invokeCollectionApis () {
     }).then(results => flattenDepth(results, 2))
 }
 
-CollectionSchema.methods.invokeApisSlippy = function invokeCollectionApisSlippy (zoom,x,y) {
+CollectionSchema.methods.invokeApisSlippy = function invokeCollectionApisSlippy (zoom, x, y) {
   return DataModelModel.findById(this.model)
     .exec()
     .then((model) => {
@@ -53,7 +53,7 @@ CollectionSchema.methods.invokeApisSlippy = function invokeCollectionApisSlippy 
       })
         .exec()
         .then((apis) => {
-          return Promise.all(apis.map(api => api.invokeSlippy(model,zoom,x,y)))
+          return Promise.all(apis.map(api => api.invokeSlippy(model, zoom, x, y)))
         })
       const uploadsPromise = UploadModel.find({
         '_id': { $in: this.uploads }

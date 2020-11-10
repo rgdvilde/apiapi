@@ -43,6 +43,14 @@
     </v-col>
     </v-row>
     </v-row>
+    <v-col lg="8">
+      <v-textarea :label="'lat'"
+                  v-model="modelLat" />
+      <v-textarea :label="'lon'"
+                  v-model="modelLon" />
+    </v-col>
+    </v-row>
+    </v-row>
     <v-row justify="end">
       <v-col lg="1">
         <v-btn v-t="'actions.save'"
@@ -83,7 +91,9 @@ export default {
       shacl: '',
       dataPaths: [],
       modelName: '',
-      modelDescription: ''
+      modelDescription: '',
+      modelLat: '',
+      modelLon: ''
     }
   },
   mounted () {
@@ -106,7 +116,9 @@ export default {
         paths: this.dataPaths,
         name: this.modelName,
         description: this.modelDescription,
-        shacl: this.shacl
+        shacl: this.shacl,
+        lat: this.modelLat,
+        lon: this.modelLon
       }).then(() => {
         this.$router.push({ name: 'index' })
       })

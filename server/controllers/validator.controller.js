@@ -2,7 +2,7 @@ const SHACLValidator = require('shacl-js')
 
 module.exports = {
   validate (req, res, next) {
-    const { data, shapes } = req.body
+    const { data, shacl: shapes } = req.body
     const validator = new SHACLValidator()
     validator.validate(data, 'application/ld+json', shapes, 'text/turtle', function (e, report) {
       console.log('Conforms? ' + report.conforms())

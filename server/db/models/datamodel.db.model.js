@@ -14,6 +14,14 @@ const DataModelSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  lat: {
+    type: String,
+    required: false
+  },
+  lon: {
+    type: String,
+    required: false
+  },
   paths: [
     {
       path: {

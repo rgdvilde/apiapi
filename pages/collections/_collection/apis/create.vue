@@ -75,9 +75,14 @@
     <v-container
       v-if="validated"
       fluid>
-      <v-switch
-        v-model="basePathSelectorVisible"
-        :label="$t('formLabels.setBasePath')" />
+      <v-row>
+        <v-switch
+          v-model="basePathSelectorVisible"
+          :label="$t('formLabels.setBasePath')" />
+        <v-switch
+          v-model="slippy"
+          :label="$t('formLabels.slippy')" />
+      </v-row>
       <v-text-field
         v-if="basePathSelectorVisible"
         @change="setBasePath" />
@@ -100,12 +105,16 @@
     <yarrrml-editor
       v-if="mapMode === 'YARRRML'"
       @complete="yarrrmlCompleted" />
+    <passtrough-editor
+      v-if="mapMode === 'PassTrough'"
+      @complete="passtroughCompleted"
+      :endpointData="endpointData" />
     <device-stepper
       v-if="mapMode === 'Mapper'"
       :model="collection.model"
       @complete="pathsCompleted" />
     <constraints-validator
-      v-if="mapMode === 'RML' || mapMode === 'YARRRML' || mapMode === 'RMLMapper'"
+      v-if="mapMode === 'RML' || mapMode === 'YARRRML' || mapMode === 'RMLMapper' || mapMode === 'PassTrough'"
       :output="mapValidation" />
     <confirm-creation-dialog
       ref="confirmDialog"
@@ -130,6 +139,7 @@ import ConstraintsValidator from '~/components/ConstraintsValidator.vue'
 import DeviceStepper from '~/components/DeviceStepper.vue'
 import RmlEditor from '~/components/RmlEditor.vue'
 import YarrrmlEditor from '~/components/YarrrmlEditor.vue'
+import PasstroughEditor from '~/components/PasstroughEditor.vue'
 import ShaclMapperWrapper from '~/components/ShaclMapperWrapper.vue'
 import { mutationTypes, actionTypes, getterTypes as apiGetters } from '~/store/api'
 import { getterTypes as collectionGetters, actionTypes as collectionActions } from '~/store/collections'
@@ -144,7 +154,8 @@ export default {
     RmlEditor,
     YarrrmlEditor,
     ConstraintsValidator,
-    ShaclMapperWrapper
+    ShaclMapperWrapper,
+    PasstroughEditor
   },
   mixins: [page],
   head () {
@@ -177,8 +188,9 @@ export default {
       mapValidation: '',
       basePathSelectorVisible: false,
       forCollection: this.$route.params.collection,
-      mappings: ['Mapper', 'RMLMapper', 'RML', 'YARRRML'],
-      endpointData: ''
+      mappings: ['Mapper', 'RMLMapper', 'RML', 'YARRRML', 'PassTrough'],
+      endpointData: '',
+      slippy: false
     }
   },
   computed: {
@@ -190,7 +202,8 @@ export default {
         authMethod: this.authMethod,
         forCollection: this.forCollection,
         rml: this.rml,
-        yarrrml: this.yarrrml
+        yarrrml: this.yarrrml,
+        slippy: this.slippy
       }
       if (this.basePathSelectorVisible) {
         data.dataPath = this.basePath
@@ -259,6 +272,31 @@ export default {
       if (this.collection.model.shacl) {
         const data = { 'shacl': this.collection.model.shacl, 'rml': this.rml, 'url': this.url, 'mapmode': 'rml' }
         fetch(`${process.env.baseUrl}/api/map/validate`, {
+          method: 'POST',
+          body: JSON.stringify(data),
+          headers: {
+            'Content-Type': 'application/json'
+            // 'Content-Type': 'application/x-www-form-urlencoded',
+          }
+        })
+          .then(data => data.json())
+          .then((json) => {
+            if (JSON.stringify(json) === 'true') {
+              this.dialogVisible = true
+            } else {
+              this.dialogVisible = false
+            }
+            this.mapValidation = JSON.stringify(json)
+          })
+          .catch(err => console.error(err))
+      } else {
+        this.dialogVisible = true
+      }
+    },
+    passtroughCompleted () {
+      if (this.collection.model.shacl) {
+        const data = { 'shapes': this.collection.model.shacl, 'data': this.endpointData }
+        fetch(`${process.env.baseUrl}/api/validate`, {
           method: 'POST',
           body: JSON.stringify(data),
           headers: {
