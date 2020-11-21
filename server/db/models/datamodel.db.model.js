@@ -14,6 +14,11 @@ const DataModelSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  context: {
+    type: Array,
+    default: [],
+    required: false
+  },
   paths: [
     {
       path: {

@@ -10,6 +10,24 @@
     </p>
     <v-row>
       <v-col lg="8">
+        <v-btn
+          @click="startSampling"
+          text
+          class="mr-4">
+          {{ $t('actions.reset') }}
+        </v-btn>
+        <v-btn
+          @click="stopSampling"
+          text
+          class="mr-4">
+          Stop
+        </v-btn>
+        <v-btn
+          @click="clearSampling"
+          text
+          class="mr-4">
+          Clear
+        </v-btn>
         <api-list :collection-id="collection._id"
                   :apis="collection.apis"
                   :uploads="collection.uploads" />
@@ -51,6 +69,47 @@ export default {
   },
   mounted () {
     this.setCrumbs([{ label: this.$t('nav.home'), route: { name: 'index' } }, { label: this.collection.name }])
+  },
+  methods: {
+    startSampling () {
+      const payload = JSON.stringify({
+        'collectionId': this.collection._id
+      })
+      fetch(`${process.env.baseUrl}/api/server/sample/start`, {
+        method: 'POST',
+        body: payload,
+        headers: {
+          'Content-Type': 'application/json'
+          // 'Content-Type': 'application/x-www-form-urlencoded',
+        }
+      })
+    },
+    stopSampling () {
+      const payload = JSON.stringify({
+        'collectionId': this.collection._id
+      })
+      fetch(`${process.env.baseUrl}/api/server/sample/stop`, {
+        method: 'POST',
+        body: payload,
+        headers: {
+          'Content-Type': 'application/json'
+          // 'Content-Type': 'application/x-www-form-urlencoded',
+        }
+      })
+    },
+    clearSampling () {
+      const payload = JSON.stringify({
+        'collectionId': this.collection._id
+      })
+      fetch(`${process.env.baseUrl}/api/server/sample/clear`, {
+        method: 'POST',
+        body: payload,
+        headers: {
+          'Content-Type': 'application/json'
+          // 'Content-Type': 'application/x-www-form-urlencoded',
+        }
+      })
+    }
   }
 }
 </script>

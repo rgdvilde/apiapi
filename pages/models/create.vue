@@ -41,6 +41,10 @@
       <shacl-editor
         @complete="shaclCompleted" />
     </v-col>
+    <v-col lg="8">
+      <context-editor
+        @complete="contextCompleted" />
+    </v-col>
     </v-row>
     </v-row>
     <v-row justify="end">
@@ -58,13 +62,14 @@
 import { mapActions } from 'vuex'
 import JsonEditor from '../../components/JsonEditor'
 import ShaclEditor from '../../components/ShaclEditor'
+import ContextEditor from '../../components/ContextEditor'
 import ModelPropertySelector from '../../components/ModelPropertySelector'
 import { actionTypes } from '../../store/models/types'
 import page from '~/mixins/page'
 
 export default {
   name: 'ModelCreate',
-  components: { ModelPropertySelector, JsonEditor, ShaclEditor },
+  components: { ModelPropertySelector, JsonEditor, ShaclEditor, ContextEditor },
   mixins: [page],
   data () {
     return {
@@ -83,7 +88,8 @@ export default {
       shacl: '',
       dataPaths: [],
       modelName: '',
-      modelDescription: ''
+      modelDescription: '',
+      context: []
     }
   },
   mounted () {
@@ -100,6 +106,10 @@ export default {
     shaclCompleted (shacl) {
       console.log(shacl)
       this.shacl = shacl
+    },
+    contextCompleted (context) {
+      console.log(context)
+      this.context = context
     },
     savePaths () {
       this.saveDataPaths({

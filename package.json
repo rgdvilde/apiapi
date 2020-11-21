@@ -34,6 +34,7 @@
     "morgan": "^1.10.0",
     "nuxt": "^2.14.1",
     "nuxt-i18n": "^6.13.7",
+    "object-hash": "^2.0.3",
     "papaparse": "^5.3.0",
     "rdflib": "^2.1.1",
     "redis": "^3.0.2",
