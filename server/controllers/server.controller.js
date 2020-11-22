@@ -20,7 +20,7 @@ module.exports = {
   },
   startSampling (req, res) {
   	const { body } = req
-  	const { collectionId } = body
+  	const { collectionId, base } = body
   	const collectionSampler = setInterval(() => {
 	  	CollectionModel.findById(collectionId).then((res) => {
 	    	const { apis } = res
@@ -39,7 +39,7 @@ module.exports = {
                   })
                   .catch(err => console.log(err))
               })
-              CollectionModel.updateOne({ _id: collectionId }, { lastSampled: Date.now() })
+              CollectionModel.updateOne({ _id: collectionId }, { lastSampled: Date.now(), base })
                 .exec()
             })
           })

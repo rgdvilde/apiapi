@@ -21,7 +21,9 @@ const PATH_TYPES = {
 }
 
 const EXPAND = true
-const COMPACT = true
+const COMPACT = false
+const PAGESIZE = 5
+const PAGE = 0
 
 module.exports.PATH_TYPES = PATH_TYPES
 
@@ -148,14 +150,14 @@ const mapDef = (data, paths, name) => {
   })
 }
 
-const transformStream = (obj, collection,c) => {
+const transformStream = (obj, collection,c, meta) => {
+  const {base} = collection
   return new Promise(function (myResolve, myReject) {
     console.log('transformStream')
     return Promise.all(obj.map((en) => {
       if ('@id' in en) {
         const id = en['@id']
         if (!(id.slice(0, 2) === '_:')) {
-          console.log(decodeURIComponent(id))
           en['@id'] = decodeURIComponent(id)
           const reg = /.+?(?=\\?generatedAtTime=)/
           const res = reg.exec(decodeURIComponent(id))
@@ -195,16 +197,26 @@ const transformStream = (obj, collection,c) => {
         }
       }
       ]
-      myResolve( {
+      let suf = ''
+      if(meta['xyz']){
+        suf = '/' + meta['xyz'][2] + '/' + meta['xyz'][0] + '/' + meta['xyz'][1]
+      }
+      const nodeId = base + '/api/data/'+ collection._id + '?SampledAt=' + collection.lastSampled.toISOString() + '/stream' + suf
+      const nodePartOf = base + '/api/data/'+ collection._id + '/stream'
+      const out = {
         '@context': context,
         '@included': included,
-        '@id': 'https://example/apiaip#' + collection._id + '?SampledAt=' + collection.lastSampled,
+        '@id': nodeId,
         '@type': 'tree:Node',
         'dcterms:isPartOf': {
-          '@id': 'https://example/apiaip#' + collection._id,
+          '@id': nodePartOf,
           '@type': 'tree:Collection'
-        }
-      })
+        },
+      }
+      if (meta['tree:relation']) {
+        out['tree:relation'] = meta['tree:relation']
+      }
+      myResolve(out)
     })
   })
 }
@@ -233,6 +245,9 @@ const expandDepth = (j) => {
 }
 
 calculateSquare = (x,y,z) => {
+  x = parseInt(x)
+  y = parseInt(y)
+  z = parseInt(z)
  const tile2long = (x,z) => {
   return (x/Math.pow(2,z)*360-180);
  }
@@ -248,6 +263,7 @@ calculateSquare = (x,y,z) => {
  }
 }
 
+
 ApiSchema.methods.raw = async function getRawData () {
   const client = new HttpService(this.url, this.customHeaders)
   const { data } = this.requestMethod === 'get'
@@ -256,11 +272,63 @@ ApiSchema.methods.raw = async function getRawData () {
   return data
 }
 
-ApiSchema.methods.getStream = function getApiStream (collection, model) {
+ApiSchema.methods.getStream = function getApiStream (collection, model,x,y,z) {
   const { records, rml, name, header } = this
-  const cor = calculateSquare(130,85,8)
+  const { base } = collection
+  const xyz = x && y && z
+  x = parseInt(x)
+  y = parseInt(y)
+  z = parseInt(z)
+  let  cordinates = {}
+  if (x && y && z) {
+    cordinates = calculateSquare(x,y,z)
+  }
+  const recordQuery = () => {
+    return ApiModel.aggregate(
+    [
+      { "$lookup": {
+        "from": RecordModel.collection.name,
+        "localField": "records",
+        "foreignField": "_id",
+        "as": "records"
+      }},
+      { "$unwind": "$records" },
+      { "$match": {
+       "records._id": { $in: records}
+      } 
+      },
+      {
+        "$sort": { "records.batch": 1, "records.id": 1 }
+      },
+      {"$limit": (PAGE+1)*PAGESIZE},
+      {"$skip": PAGE*PAGESIZE},
+      { "$group": {
+        "_id": "$_id",
+        "records": { "$push": "$records" }
+      }}
+    ])
+    .exec()
+    .then(result => {
+      return result
+    })
+  }
 
-  return ApiModel.aggregate(
+  const resultQueryXYZcount = (x,y,z) => {
+    return recordQueryXYZ(x,y,z).then(result => {
+      if(!result[0]){
+        return 0
+      }
+      else {
+        return result[0]['records'].length
+      }
+    })
+  }
+
+  const recordQueryXYZ = (x,y,z) => {
+    console.log(x,y,z)
+    console.log(records)
+    cor = calculateSquare(x,y,z)
+    return ApiModel.aggregate(
     [
       { "$lookup": {
         "from": RecordModel.collection.name,
@@ -273,8 +341,12 @@ ApiSchema.methods.getStream = function getApiStream (collection, model) {
        "records._id": { $in: records},
        "records.lon": { $gt: cor['00'][0] , $lt: cor['10'][0] },
        "records.lat": { $gt: cor['00'][1], $lt: cor['01'][1] },
-      } 
+      }},
+      {
+        "$sort": { "records.batch": 1, "records.id": 1 }
       },
+      {"$limit": (PAGE+1)*PAGESIZE},
+      {"$skip": PAGE*PAGESIZE},
       { "$group": {
         "_id": "$_id",
         "records": { "$push": "$records" }
@@ -282,36 +354,130 @@ ApiSchema.methods.getStream = function getApiStream (collection, model) {
     ])
     .exec()
     .then(result => {
-      if(result[0]){
+      console.log(result)
+      return result
+    })
+  }
+  const query = (x && y && z) ? recordQueryXYZ(x,y,z) : recordQuery()
+  return query.then(result => {
       // "tags" is now filtered by condition and "joined"
-        const erecords = result[0]['records']
-        const { context } = model
-        const streamRecords = []
-        const recordDict = {}
-        erecords.forEach((r) => {
-          const { id, content } = r
-          const pcontent = JSON.parse(content)
-          pcontent.recordid = id
-          streamRecords.push(pcontent)
-        })
-        const data = {
-          ...header,
-          'records': streamRecords
+      let erecords = []
+      if(result[0]){
+        erecords = result[0]['records']
+      }
+      const { context } = model
+      const recordDict = {}
+      erecords.forEach((r) => {
+        const { id, content, batch } = r
+        const pcontent = JSON.parse(content)
+        pcontent.recordid = id
+        if(!recordDict[batch]){
+          recordDict[batch] = []
         }
-        return mapRML(data, rml, rmlmapperPath, tempFolderPath, name).then((out) => {
+        recordDict[batch].push(pcontent)
+      })
+      const dataDict = {}
+      Object.keys(recordDict).forEach(key => {
+        dataDict[key] = {
+          ...header,
+          'records': recordDict[key]
+        }
+      })
+
+      const traverseNodeIdBase = base + '/api/data/' + collection._id + '/stream/'
+      const metaPromiseQueue = []
+      if(xyz){
+        metaPromiseQueue.push(resultQueryXYZcount(x-1,y,z))
+        metaPromiseQueue.push(resultQueryXYZcount(x+1,y,z))
+        metaPromiseQueue.push(resultQueryXYZcount(x,y+1,z))
+        metaPromiseQueue.push(resultQueryXYZcount(x,y-1,z))
+      }
+      return Promise.all(metaPromiseQueue).then(result => {
+        console.log(result)
+        let meta = {}
+        if(xyz) {
+        meta = {
+          'xyz': [x,y,z],
+          'tree:relation' : [
+          {
+              "@type": "tree:LessThanRelation",
+              "tree:node": traverseNodeIdBase + z + '/' + (x-1) + '/' + y,
+              "sh:path": "pathToLocationLon",
+              "tree:value": cordinates['00'][0],
+              "tree:remainingItems": result[0]
+          },
+          {
+              "@type": "tree:GreaterThanRelation",
+              "tree:node": traverseNodeIdBase + z + '/' + (x+1) + '/' + y,
+              "sh:path": "pathToLocationLon",
+              "tree:value": cordinates['10'][0],
+              "tree:remainingItems": result[1]
+          },
+          {
+              "@type": "tree:LessThanRelation",
+              "tree:node": traverseNodeIdBase + z + '/' + x + '/' + (y+1),
+              "sh:path": "pathToLocationLat",
+              "tree:value": cordinates['00'][1],
+              "tree:remainingItems": result[2]
+          },
+          {
+              "@type": "tree:GreaterThanRelation",
+              "tree:node": traverseNodeIdBase + z + '/' + x + '/' + (y-1),
+              "sh:path": "pathToLocationLat",
+              "tree:value": cordinates['01'][1],
+              "tree:remainingItems": result[3]
+          }
+        ]
+        }
+        }
+
+        console.log(meta)
+        return mapRMLsplit(dataDict, rml, rmlmapperPath, tempFolderPath, name).then((out) => {
+          const outconcat = [].concat.apply([], out);
           if (EXPAND) {
-            return transformStream(expandDepth(out),collection,JSON.parse(context)).then(res=> {
+            return transformStream(expandDepth(outconcat),collection,JSON.parse(context),meta).then(res=> {
               return res
             })
           }
           else {
-            return transformStream(out,collection,JSON.parse(context)).then(res=> {
+            return transformStream(outconcat,collection,JSON.parse(context),meta).then(res=> {
               return res
             })
           }
-        })    
-      }
+        }) 
+      })
+   
     })
+}
+
+const getDeepKeys = (obj, suffix) => {
+    var keys = [];
+    for(var key in obj) {
+      if(key==='@id'){
+      if ((obj[key].slice(0, 2) === '_:')) {
+          const newId = obj[key] + suffix
+          obj[key] = newId
+        }
+      }
+        keys.push(key);
+        if(typeof obj[key] === "object") {
+            var subkeys = getDeepKeys(obj[key], suffix);
+            keys = keys.concat(subkeys.map(function(subkey) {
+                return key + "." + subkey;
+            }));
+        }
+    }
+    return keys;
+}
+
+const mapRMLsplit = (dataDict,rml,rmlmapperPath,tempFolderPath,name) => {
+  return Promise.all(Object.keys(dataDict).map(key => {
+    const data = dataDict[key]
+    return mapRML(data, rml, rmlmapperPath, tempFolderPath, name).then(out => {
+      getDeepKeys(out,key)
+      return out
+    })
+  }))
 }
 
 ApiSchema.methods.invokeStream = function invokeApiStream (model) {
@@ -335,6 +501,7 @@ ApiSchema.methods.invokeStream = function invokeApiStream (model) {
         ...data,
         'records': []
       }
+      const batch = Date.now()
       const changedObjects = []
       data.forEach((record) => {
         // update
@@ -347,14 +514,13 @@ ApiSchema.methods.invokeStream = function invokeApiStream (model) {
           }
         }
         changedObjects.push({
-          'id': recordid + '?generatedAtTime=' + Date.now(),
+          'id': recordid + '?generatedAtTime=' + new Date().toISOString(),
           'hash': recordHash,
           'content': JSON.stringify(record),
           'typeOf': recordid,
-          'createdAt': Date.now(),
-          'lat': lat,
-          'lon': lon,
-          'api': this._id
+          batch,
+          lat,
+          lon,
         })
         newChangeHash[recordid] = recordHash
       })

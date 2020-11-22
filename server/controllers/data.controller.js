@@ -19,9 +19,9 @@ module.exports = {
     }).catch(next)
   },
   getStreamForCollection (req, res, next) {
-    const { id: collectionId } = req.params
+    const { id: collectionId, x, y, z } = req.params
     CollectionModel.findById(collectionId).then((doc) => {
-      doc.getApiStreams().then((result) => {
+      doc.getApiStreams(x,y,z).then((result) => {
         res.set('Content-Type', 'application/ld+json')
         res.json(result)
       })

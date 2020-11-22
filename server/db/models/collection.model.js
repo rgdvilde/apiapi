@@ -17,6 +17,10 @@ const CollectionSchema = mongoose.Schema({
     type: Date,
     required: false
   },
+  base : {
+    type: String,
+    required: false
+  },
   apis: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Api' }],
   uploads: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Upload' }],
   model: {
@@ -48,7 +52,7 @@ CollectionSchema.methods.invokeApis = function invokeCollectionApis () {
     }).then(results => flattenDepth(results, 2))
 }
 
-CollectionSchema.methods.getApiStreams = function getCollectionApiStreams () {
+CollectionSchema.methods.getApiStreams = function getCollectionApiStreams (x,y,z) {
   return DataModelModel.findById(this.model)
     .exec()
     .then((model) => {
@@ -61,7 +65,7 @@ CollectionSchema.methods.getApiStreams = function getCollectionApiStreams () {
             return ApiModel.findById(api._id)
               .exec()
               .then((papi) => {
-                return papi.getStream(this, model)
+                return papi.getStream(this, model, x,y,z)
               })
           }))
         })

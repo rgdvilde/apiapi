@@ -73,7 +73,8 @@ export default {
   methods: {
     startSampling () {
       const payload = JSON.stringify({
-        'collectionId': this.collection._id
+        'collectionId': this.collection._id,
+        'base': process.env.baseUrl
       })
       fetch(`${process.env.baseUrl}/api/server/sample/start`, {
         method: 'POST',
