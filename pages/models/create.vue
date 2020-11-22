@@ -116,7 +116,8 @@ export default {
         paths: this.dataPaths,
         name: this.modelName,
         description: this.modelDescription,
-        shacl: this.shacl
+        shacl: this.shacl,
+        context: this.context
       }).then(() => {
         this.$router.push({ name: 'index' })
       })

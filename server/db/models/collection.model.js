@@ -59,7 +59,6 @@ CollectionSchema.methods.getApiStreams = function getCollectionApiStreams () {
         .then((apis) => {
           return Promise.all(apis.map((api) => {
             return ApiModel.findById(api._id)
-              .populate('records')
               .exec()
               .then((papi) => {
                 return papi.getStream(this, model)

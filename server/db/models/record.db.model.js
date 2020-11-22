@@ -17,10 +17,23 @@ const RecordSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  lat: {
+    type: Number,
+    required:false
+  },
+  lon: {
+    type: Number,
+    required: false
+  },
+  api: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Api',
+    required: true
+  },
   expireAt: {
     type: Date,
     default: Date.now,
-    index: { expires: '5m' }
+    index: { expires: '100m' }
   }
 })
 
