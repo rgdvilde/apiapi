@@ -10,6 +10,7 @@ const axios = require('axios').default
 const hash = require('object-hash')
 const RecordModel = require('./record.db.model')
 const jsonld = require('jsonld')
+const jp = require('jsonpath');
 
 const rmlmapperPath = './rmlmapper.jar'
 const tempFolderPath = './tmp'
@@ -86,6 +87,18 @@ const ApiSchema = new mongoose.Schema({
     type: Object,
     default: {}
   },
+  lat: {
+    type: String,
+    required: false
+  },
+  lon: {
+    type: String,
+    required: false
+  },
+  recordId: {
+    type: String,
+    required: false
+  },
   records: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Record' }],
   meta: { type: Object, default: {} },
   categories: { type: Array, default: [] },
@@ -149,8 +162,8 @@ const mapDef = (data, paths, name) => {
   })
 }
 
-const transformStream = (obj, collection,c, meta) => {
-  const {base} = collection
+const transformStream = (obj, collection, c, meta) => {
+  const { base } = collection
   return new Promise(function (myResolve, myReject) {
     console.log('transformStream')
     return Promise.all(obj.map((en) => {
@@ -161,62 +174,59 @@ const transformStream = (obj, collection,c, meta) => {
           const reg = /.+?(?=\\?generatedAtTime=)/
           const res = reg.exec(decodeURIComponent(id))
           en['dcterms:isVersionOf'] = res[0]
-          if(c !== ''){
-            if(COMPACT){
-              return jsonld.compact(en, JSON.parse(c)).then(cdoc => {
-                return(cdoc)
+          if (c !== '') {
+            if (COMPACT) {
+              return jsonld.compact(en, JSON.parse(c)).then((cdoc) => {
+                return (cdoc)
               })
-              .catch(err => console.log(err))
-            }
-            else {
+                .catch(err => console.log(err))
+            } else {
               en['@context'] = c
-
             }
-
           }
         }
       }
-      return(en)
+      return (en)
     }))
-    .then(included => {
-      const context = [{
-        'prov': 'http://www.w3.org/ns/prov#',
-        'tree': 'https://w3id.org/tree#',
-        'sh': 'http://www.w3.org/ns/shacl#',
-        'dcterms': 'http://purl.org/dc/terms/',
-        'tree:member': {
-          '@type': '@id'
-        },
-        'memberOf': {
-          '@reverse': 'tree:member',
-          '@type': '@id'
-        },
-        'tree:node': {
-          '@type': '@id'
+      .then((included) => {
+        const context = [{
+          'prov': 'http://www.w3.org/ns/prov#',
+          'tree': 'https://w3id.org/tree#',
+          'sh': 'http://www.w3.org/ns/shacl#',
+          'dcterms': 'http://purl.org/dc/terms/',
+          'tree:member': {
+            '@type': '@id'
+          },
+          'memberOf': {
+            '@reverse': 'tree:member',
+            '@type': '@id'
+          },
+          'tree:node': {
+            '@type': '@id'
+          }
         }
-      }
-      ]
-      let suf = ''
-      if(meta['xyz']){
-        suf = '/' + meta['xyz'][2] + '/' + meta['xyz'][0] + '/' + meta['xyz'][1]
-      }
-      const nodeId = base + '/api/data/'+ collection._id + '?SampledAt=' + collection.lastSampled.toISOString() + '/stream' + suf
-      const nodePartOf = base + '/api/data/'+ collection._id + '/stream'
-      const out = {
-        '@context': context,
-        '@included': included,
-        '@id': nodeId,
-        '@type': 'tree:Node',
-        'dcterms:isPartOf': {
-          '@id': nodePartOf,
-          '@type': 'tree:Collection'
-        },
-      }
-      if (meta['tree:relation']) {
-        out['tree:relation'] = meta['tree:relation']
-      }
-      myResolve(out)
-    })
+        ]
+        let suf = ''
+        if (meta.xyz) {
+          suf = '/' + meta.xyz[2] + '/' + meta.xyz[0] + '/' + meta.xyz[1]
+        }
+        const nodeId = base + '/api/data/' + collection._id + '?SampledAt=' + collection.lastSampled.toISOString() + '/stream' + suf
+        const nodePartOf = base + '/api/data/' + collection._id + '/stream'
+        const out = {
+          '@context': context,
+          '@included': included,
+          '@id': nodeId,
+          '@type': 'tree:Node',
+          'dcterms:isPartOf': {
+            '@id': nodePartOf,
+            '@type': 'tree:Collection'
+          }
+        }
+        if (meta['tree:relation']) {
+          out['tree:relation'] = meta['tree:relation']
+        }
+        myResolve(out)
+      })
   })
 }
 
@@ -243,25 +253,24 @@ const expandDepth = (j) => {
   return result.filter(el => (el['@id'].slice(0, 2) !== '_:'))
 }
 
-calculateSquare = (x,y,z) => {
+const calculateSquare = (x, y, z) => {
   x = parseInt(x)
   y = parseInt(y)
   z = parseInt(z)
- const tile2long = (x,z) => {
-  return (x/Math.pow(2,z)*360-180);
- }
- const  tile2lat = (y,z) => {
-  var n=Math.PI-2*Math.PI*y/Math.pow(2,z);
-  return (180/Math.PI*Math.atan(0.5*(Math.exp(n)-Math.exp(-n))));
- }
- return {
-  '00' :[tile2long(x,z),tile2lat(y+1,z)],
-  '10' :[tile2long(x+1,z),tile2lat(y+1,z)],
-  '01' :[tile2long(x,z),tile2lat(y,z)],
-  '11' :[tile2long(x+1,z),tile2lat(y,z)],
- }
+  const tile2long = (x, z) => {
+    return (x / 2 ** z * 360 - 180)
+  }
+  const tile2lat = (y, z) => {
+    const n = Math.PI - 2 * Math.PI * y / 2 ** z
+    return (180 / Math.PI * Math.atan(0.5 * (Math.exp(n) - Math.exp(-n))))
+  }
+  return {
+    '00': [tile2long(x, z), tile2lat(y + 1, z)],
+    '10': [tile2long(x + 1, z), tile2lat(y + 1, z)],
+    '01': [tile2long(x, z), tile2lat(y, z)],
+    '11': [tile2long(x + 1, z), tile2lat(y, z)]
+  }
 }
-
 
 ApiSchema.methods.raw = async function getRawData () {
   const client = new HttpService(this.url, this.customHeaders)
@@ -271,8 +280,9 @@ ApiSchema.methods.raw = async function getRawData () {
   return data
 }
 
-ApiSchema.methods.getStream = function getApiStream (collection, model,x,y,z, page) {
+ApiSchema.methods.getStream = function getApiStream (collection, model, x, y, z, page) {
   const { records, rml, name, header } = this
+  console.log(header)
   const { base } = collection
   const xyz = x && y && z
   x = parseInt(x)
@@ -280,362 +290,368 @@ ApiSchema.methods.getStream = function getApiStream (collection, model,x,y,z, pa
   z = parseInt(z)
   if (!page) {
     page = 0
-  }
-  else {
+  } else {
     page = parseInt(page)
   }
   let  cordinates = {}
   if (x && y && z) {
-    cordinates = calculateSquare(x,y,z)
+    cordinates = calculateSquare(x, y, z)
   }
   const recordQuery = (skip, limit) => {
-    if(!skip){
+    if (!skip) {
       skip = 0
     }
-    if(limit){
-    return ApiModel.aggregate(
-      [
-        { "$lookup": {
-          "from": RecordModel.collection.name,
-          "localField": "records",
-          "foreignField": "_id",
-          "as": "records"
-        }},
-        { "$unwind": "$records" },
-        { "$match": {
-         "records._id": { $in: records}
-        } 
-        },
-        {
-          "$sort": { "records.batch": 1, "records.id": 1 }
-        },
-        {"$limit": limit},
-        {"$skip": skip},
-        { "$group": {
-          "_id": "$_id",
-          "records": { "$push": "$records" }
-        }}
-      ])
-      .exec()
-      .then(result => {
-        return result
-      })
-    }
-    else{
-    return ApiModel.aggregate(
-      [
-        { "$lookup": {
-          "from": RecordModel.collection.name,
-          "localField": "records",
-          "foreignField": "_id",
-          "as": "records"
-        }},
-        { "$unwind": "$records" },
-        { "$match": {
-         "records._id": { $in: records}
-        } 
-        },
-        {
-          "$sort": { "records.batch": 1, "records.id": 1 }
-        },
-        {"$skip": skip},
-        { "$group": {
-          "_id": "$_id",
-          "records": { "$push": "$records" }
-        }}
-      ])
-      .exec()
-      .then(result => {
-        return result
-      })
-    }
-
-  }
-
-  const recordQueryXYZ = (x,y,z,skip,limit) => {
-    if(!skip){
-      skip = 0
-    }
-    cor = calculateSquare(x,y,z)
-    if(limit){
+    if (limit) {
       return ApiModel.aggregate(
-      [
-        { "$lookup": {
-          "from": RecordModel.collection.name,
-          "localField": "records",
-          "foreignField": "_id",
-          "as": "records"
-        }},
-        { "$unwind": "$records" },
-        { "$match": {
-         "records._id": { $in: records},
-         "records.lon": { $gt: cor['00'][0] , $lt: cor['10'][0] },
-         "records.lat": { $gt: cor['00'][1], $lt: cor['01'][1] },
-        }},
-        {
-          "$sort": { "records.batch": -1, "records.id": 1 }
-        },
-        {"$limit": limit},
-        {"$skip": skip},
-        { "$group": {
-          "_id": "$_id",
-          "records": { "$push": "$records" }
-        }}
-      ])
-      .exec()
-      .then(result => {
-        console.log(result)
-        return result
-      }) 
+        [
+          { '$lookup': {
+            'from': RecordModel.collection.name,
+            'localField': 'records',
+            'foreignField': '_id',
+            'as': 'records'
+          } },
+          { '$unwind': '$records' },
+          { '$match': {
+            'records._id': { $in: records }
+          }
+          },
+          {
+            '$sort': { 'records.batch': -1, 'records.id': 1 }
+          },
+          { '$limit': limit },
+          { '$skip': skip },
+          { '$group': {
+            '_id': '$_id',
+            'records': { '$push': '$records' }
+          } }
+        ])
+        .exec()
+        .then((result) => {
+          return result
+        })
+    } else {
+      return ApiModel.aggregate(
+        [
+          { '$lookup': {
+            'from': RecordModel.collection.name,
+            'localField': 'records',
+            'foreignField': '_id',
+            'as': 'records'
+          } },
+          { '$unwind': '$records' },
+          { '$match': {
+            'records._id': { $in: records }
+          }
+          },
+          {
+            '$sort': { 'records.batch': -1, 'records.id': 1 }
+          },
+          { '$skip': skip },
+          { '$group': {
+            '_id': '$_id',
+            'records': { '$push': '$records' }
+          } }
+        ])
+        .exec()
+        .then((result) => {
+          return result
+        })
     }
-    else{
-    return ApiModel.aggregate(
-      [
-        { "$lookup": {
-          "from": RecordModel.collection.name,
-          "localField": "records",
-          "foreignField": "_id",
-          "as": "records"
-        }},
-        { "$unwind": "$records" },
-        { "$match": {
-         "records._id": { $in: records},
-         "records.lon": { $gt: cor['00'][0] , $lt: cor['10'][0] },
-         "records.lat": { $gt: cor['00'][1], $lt: cor['01'][1] },
-        }},
-        {
-          "$sort": { "records.batch": -1, "records.id": 1 }
-        },
-        {"$skip": skip},
-        { "$group": {
-          "_id": "$_id",
-          "records": { "$push": "$records" }
-        }}
-      ])
-      .exec()
-      .then(result => {
-        console.log(result)
-        return result
-      })
-    }
-
   }
 
-  const resultQueryXYZcount = (x,y,z) => {
-    return recordQueryXYZ(x,y,z,0).then(result => {
-      if(!result[0]){
+  const recordQueryXYZ = (x, y, z, skip, limit) => {
+    if (!skip) {
+      skip = 0
+    }
+    cor = calculateSquare(x, y, z)
+    if (limit) {
+      return ApiModel.aggregate(
+        [
+          { '$lookup': {
+            'from': RecordModel.collection.name,
+            'localField': 'records',
+            'foreignField': '_id',
+            'as': 'records'
+          } },
+          { '$unwind': '$records' },
+          { '$match': {
+            'records._id': { $in: records },
+            'records.lon': { $gt: cor['00'][0], $lt: cor['10'][0] },
+            'records.lat': { $gt: cor['00'][1], $lt: cor['01'][1] }
+          } },
+          {
+            '$sort': { 'records.batch': -1, 'records.id': 1 }
+          },
+          { '$limit': limit },
+          { '$skip': skip },
+          { '$group': {
+            '_id': '$_id',
+            'records': { '$push': '$records' }
+          } }
+        ])
+        .exec()
+        .then((result) => {
+          console.log(result)
+          return result
+        })
+    } else {
+      return ApiModel.aggregate(
+        [
+          { '$lookup': {
+            'from': RecordModel.collection.name,
+            'localField': 'records',
+            'foreignField': '_id',
+            'as': 'records'
+          } },
+          { '$unwind': '$records' },
+          { '$match': {
+            'records._id': { $in: records },
+            'records.lon': { $gt: cor['00'][0], $lt: cor['10'][0] },
+            'records.lat': { $gt: cor['00'][1], $lt: cor['01'][1] }
+          } },
+          {
+            '$sort': { 'records.batch': -1, 'records.id': 1 }
+          },
+          { '$skip': skip },
+          { '$group': {
+            '_id': '$_id',
+            'records': { '$push': '$records' }
+          } }
+        ])
+        .exec()
+        .then((result) => {
+          console.log(result)
+          return result
+        })
+    }
+  }
+
+  const resultQueryXYZcount = (x, y, z) => {
+    return recordQueryXYZ(x, y, z, 0).then((result) => {
+      if (!result[0]) {
         return 0
-      }
-      else {
-        return result[0]['records'].length
+      } else {
+        return result[0].records.length
       }
     })
   }
 
-  const resultQuerycount = (x,y,z) => {
-    return recordQuery(x,y,z,0).then(result => {
-      if(!result[0]){
+  const resultQuerycount = (x, y, z) => {
+    return recordQuery(x, y, z, 0).then((result) => {
+      if (!result[0]) {
         return 0
-      }
-      else {
-        return result[0]['records'].length
+      } else {
+        return result[0].records.length
       }
     })
   }
 
-  const query = (x && y && z) ? recordQueryXYZ(x,y,z,page*PAGESIZE,(page+1)*PAGESIZE) : recordQuery(page*PAGESIZE,(page+1)*PAGESIZE)
-  return query.then(result => {
-      // "tags" is now filtered by condition and "joined"
-      let erecords = []
-      if(result[0]){
-        erecords = result[0]['records']
+  const query = (x && y && z) ? recordQueryXYZ(x, y, z, page * PAGESIZE, (page + 1) * PAGESIZE) : recordQuery(page * PAGESIZE, (page + 1) * PAGESIZE)
+  return query.then((result) => {
+    console.log(result)
+    // "tags" is now filtered by condition and "joined"
+    let erecords = []
+    if (result[0]) {
+      erecords = result[0].records
+    }
+    const { context, latPath: shaclLatPath, lonPath: shaclLonPath } = model
+    const recordDict = {}
+    // min en max
+    const timeMM = []
+    erecords.forEach((r) => {
+      const { id, content, batch, header } = r
+      if(!timeMM[0]){
+        timeMM[0] = batch
+        timeMM[1] = batch
       }
-      const { context } = model
-      const recordDict = {}
-      erecords.forEach((r) => {
-        const { id, content, batch } = r
-        const pcontent = JSON.parse(content)
-        pcontent.recordid = id
-        if(!recordDict[batch]){
-          recordDict[batch] = []
-        }
-        recordDict[batch].push(pcontent)
-      })
-      const dataDict = {}
-      Object.keys(recordDict).forEach(key => {
-        dataDict[key] = {
-          ...header,
-          'records': recordDict[key]
-        }
-      })
-      const promiseWrapper = (promise,name)=> {
-        return promise.then(result=>{
-          return {
-            name,
-            result
-          }
-        })
+      if (batch < timeMM[0]){
+        timeMM[0] = batch
       }
+      if (batch > timeMM[1]){
+        timeMM[1] = batch
+      }
+      parsedHeader = JSON.parse(header)
+      const pcontent = JSON.parse(content)
+      pcontent.recordid = id
+      if (!recordDict[batch]) {
+        recordDict[batch] = {
+          'header': parsedHeader,
+          'entries': []
+        }
+      }
+      recordDict[batch].entries.push(pcontent)
+    })
+    const dataDict = {}
+    Object.keys(recordDict).forEach((key) => {
+      dataDict[key] = {
+        ...recordDict[key].header,
+        'records': recordDict[key].entries
+      }
+    })
+    const promiseWrapper = (promise, name) => {
+      return promise.then((result) => {
+        return {
+          name,
+          result
+        }
+      })
+    }
 
-      const NodeIdBase = base + '/api/data/' + collection._id
-      const nextPageURI = NodeIdBase + '/' + (page+1) + '/stream' + (xyz ? '/' + z + '/' + x + '/' + y : '')
-      const previousPageURI = NodeIdBase +  ((page-1)===0? '': '/'+(page-1)) + '/stream' + (xyz ? '/' + z + '/' + x + '/' + y : '')
-      const traverseNodeIdBase = base + '/api/data/' + collection._id + '/stream/'
-      const metaPromiseQueue = []
-      const pagePromise = new Promise((resolve,reject)=>{
-        const calcPageCount = (page, size, total) => {
-          const before = page*size
-          const after = (total - (page+1)*size)>0?total - (page+1)*size:0
-          return [before, after]
-        }
-        if (xyz){
-          resultQueryXYZcount(x,y,z).then(result=>{
-            resolve(calcPageCount(page,PAGESIZE,result))
-          })
-        }
-        else {
-          resultQuerycount().then(result=>{
-            resolve(calcPageCount(page,PAGESIZE,result))
-          })
-        }
-      })
-      if(xyz){
-        metaPromiseQueue.push(promiseWrapper(resultQueryXYZcount(x-1,y,z),'lessLon'))
-        metaPromiseQueue.push(promiseWrapper(resultQueryXYZcount(x+1,y,z), 'greaterLon'))
-        metaPromiseQueue.push(promiseWrapper(resultQueryXYZcount(x,y+1,z), 'lessLat'))
-        metaPromiseQueue.push(promiseWrapper(resultQueryXYZcount(x,y-1,z), 'greaterLat'))
+    const NodeIdBase = base + '/api/data/' + collection._id
+    const nextPageURI = NodeIdBase + '/' + (page + 1) + '/stream' + (xyz ? '/' + z + '/' + x + '/' + y : '')
+    const previousPageURI = NodeIdBase + ((page - 1) === 0 ? '' : '/' + (page - 1)) + '/stream' + (xyz ? '/' + z + '/' + x + '/' + y : '')
+    const traverseNodeIdBase = base + '/api/data/' + collection._id + '/stream/'
+    const metaPromiseQueue = []
+    const pagePromise = new Promise((resolve, reject) => {
+      const calcPageCount = (page, size, total) => {
+        const before = page * size
+        const after = (total - (page + 1) * size) > 0 ? total - (page + 1) * size : 0
+        return [before, after]
       }
-      metaPromiseQueue.push(promiseWrapper(pagePromise,'Page'))
-      return Promise.all(metaPromiseQueue).then(result => {
-        console.log(result)
-        resultMap = {}
-        result.forEach(entry => {
-          resultMap[entry['name']] = entry['result']
+      if (xyz) {
+        resultQueryXYZcount(x, y, z).then((result) => {
+          resolve(calcPageCount(page, PAGESIZE, result))
         })
-        let meta = {}
-        if (resultMap['Page'][0] > 0){
-          meta = {
-            ...meta,
-            'tree:relation': [
-            ... (meta['tree:relation'] ? meta['tree:relation'] : []) ,
+      } else {
+        resultQuerycount().then((result) => {
+          resolve(calcPageCount(page, PAGESIZE, result))
+        })
+      }
+    })
+    if (xyz) {
+      metaPromiseQueue.push(promiseWrapper(resultQueryXYZcount(x - 1, y, z), 'lessLon'))
+      metaPromiseQueue.push(promiseWrapper(resultQueryXYZcount(x + 1, y, z), 'greaterLon'))
+      metaPromiseQueue.push(promiseWrapper(resultQueryXYZcount(x, y + 1, z), 'lessLat'))
+      metaPromiseQueue.push(promiseWrapper(resultQueryXYZcount(x, y - 1, z), 'greaterLat'))
+    }
+    metaPromiseQueue.push(promiseWrapper(pagePromise, 'Page'))
+    return Promise.all(metaPromiseQueue).then((result) => {
+      console.log(result)
+      resultMap = {}
+      result.forEach((entry) => {
+        resultMap[entry.name] = entry.result
+      })
+      let meta = {}
+      if (resultMap.Page[0] > 0) {
+        meta = {
+          ...meta,
+          'tree:relation': [
+            ...(meta['tree:relation'] ? meta['tree:relation'] : []),
             {
-                "@type": "tree:LessThanRelation",
-                "tree:node": previousPageURI,
-                "sh:path": "prov:generatedAtTime",
-                "tree:value": "2020-11-12T16:33:11.000Z",
-                "tree:remainingItems": resultMap['Page'][0]
-            }
-            ]
-          }
-        }
-        if (resultMap['Page'][1] > 0){
-          meta = {
-            ...meta,
-            'tree:relation': [
-            ... (meta['tree:relation'] ? meta['tree:relation'] : []) ,
-            {
-                "@type": "tree:GreaterThanRelation",
-                "tree:node": nextPageURI,
-                "sh:path": "prov:generatedAtTime",
-                "tree:value": "2020-11-13T14:48:46.000Z",
-                "tree:remainingItems": resultMap['Page'][1]
-            }
-            ]
-          }  
-        }
-        if(xyz) {
-          meta = {
-            ...meta,
-            'xyz': [x,y,z],
-            'tree:relation' : [
-            ... (meta['tree:relation'] ? meta['tree:relation'] : []) ,
-            {
-                "@type": "tree:LessThanRelation",
-                "tree:node": traverseNodeIdBase + z + '/' + (x-1) + '/' + y,
-                "sh:path": "pathToLocationLon",
-                "tree:value": cordinates['00'][0],
-                "tree:remainingItems": resultMap['lessLon']
-            },
-            {
-                "@type": "tree:GreaterThanRelation",
-                "tree:node": traverseNodeIdBase + z + '/' + (x+1) + '/' + y,
-                "sh:path": "pathToLocationLon",
-                "tree:value": cordinates['10'][0],
-                "tree:remainingItems": resultMap['greaterLon']
-            },
-            {
-                "@type": "tree:LessThanRelation",
-                "tree:node": traverseNodeIdBase + z + '/' + x + '/' + (y+1),
-                "sh:path": "pathToLocationLat",
-                "tree:value": cordinates['00'][1],
-                "tree:remainingItems": resultMap['lessLat']
-            },
-            {
-                "@type": "tree:GreaterThanRelation",
-                "tree:node": traverseNodeIdBase + z + '/' + x + '/' + (y-1),
-                "sh:path": "pathToLocationLat",
-                "tree:value": cordinates['01'][1],
-                "tree:remainingItems": resultMap['greaterLat']
+              '@type': 'tree:LessThanOrEqualRelation',
+              'tree:node': previousPageURI,
+              'sh:path': 'prov:generatedAtTime',
+              'tree:value': new Date(timeMM[0]).toISOString(),
+              'tree:remainingItems': resultMap.Page[0]
             }
           ]
-          }
         }
+      }
+      if (resultMap.Page[1] > 0) {
+        meta = {
+          ...meta,
+          'tree:relation': [
+            ...(meta['tree:relation'] ? meta['tree:relation'] : []),
+            {
+              '@type': 'tree:GreaterOrEqualThanRelation',
+              'tree:node': nextPageURI,
+              'sh:path': 'prov:generatedAtTime',
+              'tree:value': new Date(timeMM[1]).toISOString(),
+              'tree:remainingItems': resultMap.Page[1]
+            }
+          ]
+        }
+      }
+      if (xyz) {
+        meta = {
+          ...meta,
+          'xyz': [x, y, z],
+          'tree:relation': [
+            ...(meta['tree:relation'] ? meta['tree:relation'] : []),
+            {
+              '@type': 'tree:LessThanRelation',
+              'tree:node': traverseNodeIdBase + z + '/' + (x - 1) + '/' + y,
+              'sh:path': shaclLonPath,
+              'tree:value': cordinates['00'][0],
+              'tree:remainingItems': resultMap.lessLon
+            },
+            {
+              '@type': 'tree:GreaterThanRelation',
+              'tree:node': traverseNodeIdBase + z + '/' + (x + 1) + '/' + y,
+              'sh:path': shaclLonPath,
+              'tree:value': cordinates['10'][0],
+              'tree:remainingItems': resultMap.greaterLon
+            },
+            {
+              '@type': 'tree:LessThanRelation',
+              'tree:node': traverseNodeIdBase + z + '/' + x + '/' + (y + 1),
+              'sh:path': shaclLatPath,
+              'tree:value': cordinates['00'][1],
+              'tree:remainingItems': resultMap.lessLat
+            },
+            {
+              '@type': 'tree:GreaterThanRelation',
+              'tree:node': traverseNodeIdBase + z + '/' + x + '/' + (y - 1),
+              'sh:path': shaclLatPath,
+              'tree:value': cordinates['01'][1],
+              'tree:remainingItems': resultMap.greaterLat
+            }
+          ]
+        }
+      }
 
-        console.log(meta)
-        return mapRMLsplit(dataDict, rml, rmlmapperPath, tempFolderPath, name).then((out) => {
-          const outconcat = [].concat.apply([], out);
-          if (EXPAND) {
-            return transformStream(expandDepth(outconcat),collection,context,meta).then(res=> {
-              return res
-            })
-          }
-          else {
-            return transformStream(outconcat,collection,context,meta).then(res=> {
-              return res
-            })
-          }
-        }) 
+      return mapRMLsplit(dataDict, rml, rmlmapperPath, tempFolderPath, name).then((out) => {
+        const outconcat = [].concat.apply([], out)
+        if (EXPAND) {
+          return transformStream(expandDepth(outconcat), collection, context, meta).then((res) => {
+            return res
+          })
+        } else {
+          return transformStream(outconcat, collection, context, meta).then((res) => {
+            return res
+          })
+        }
       })
-   
     })
+  })
 }
 
 const relabelBlankNodes = (obj, suffix) => {
-    var keys = [];
-    for(var key in obj) {
-      if(key==='@id'){
+  let keys = []
+  for (var key in obj) {
+    if (key === '@id') {
       if ((obj[key].slice(0, 2) === '_:')) {
-          const newId = obj[key] + suffix
-          obj[key] = newId
-        }
+        const newId = obj[key] + suffix
+        obj[key] = newId
       }
-        keys.push(key);
-        if(typeof obj[key] === "object") {
-            var subkeys = relabelBlankNodes(obj[key], suffix);
-            keys = keys.concat(subkeys.map(function(subkey) {
-                return key + "." + subkey;
-            }));
-        }
     }
-    return keys;
+    keys.push(key)
+    if (typeof obj[key] === 'object') {
+      const subkeys = relabelBlankNodes(obj[key], suffix)
+      keys = keys.concat(subkeys.map(function (subkey) {
+        return key + '.' + subkey
+      }))
+    }
+  }
+  return keys
 }
 
-const mapRMLsplit = (dataDict,rml,rmlmapperPath,tempFolderPath,name) => {
-  return Promise.all(Object.keys(dataDict).map(key => {
+const mapRMLsplit = (dataDict, rml, rmlmapperPath, tempFolderPath, name) => {
+  return Promise.all(Object.keys(dataDict).map((key) => {
     const data = dataDict[key]
-    return mapRML(data, rml, rmlmapperPath, tempFolderPath, name).then(out => {
-      relabelBlankNodes(out,key)
+    tempFolderPath = tempFolderPath + '/' + key
+    return mapRML(data, rml, rmlmapperPath, tempFolderPath, name).then((out) => {
+      relabelBlankNodes(out, key)
       return out
     })
   }))
 }
 
 ApiSchema.methods.invokeStream = function invokeApiStream (model) {
-  const { changeHash, url, rml, name, dataPath } = this
+  const { changeHash, url, rml, name, dataPath, recordId: idpath, lat: latpath, lon: lonpath } = this
   console.log('±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±')
   console.log('RECORDS')
   console.log('±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±')
-  console.log(this.records)
   let newChangeHash = {}
   if (changeHash) {
     newChangeHash = changeHash
@@ -643,20 +659,25 @@ ApiSchema.methods.invokeStream = function invokeApiStream (model) {
   return axios.get(url)
     .then((response) => {
       // handle success
-      let { data } = response
+      const { data } = response
+      let entries = data
+      let strippedData = []
       if (dataPath) {
-        data = data[dataPath]
-      }
-      const strippedData = {
-        ...data,
-        'records': []
+        entries = jp.query(data,dataPath)[0]
+        strippedData = data
+        //fix to work with all data paths
+        strippedData[dataPath] = []
       }
       const batch = Date.now()
       const changedObjects = []
-      data.forEach((record) => {
+      entries.forEach((record) => {
         // update
-        const { recordid, fields } = record
-        const { lat, lon } = fields
+        const lat = jp.query(record,latpath)[0]
+        const lon = jp.query(record,lonpath)[0]
+        const recordid = jp.query(record,idpath)[0]
+        console.log(lat)
+        console.log(lon)
+        console.log(recordid)
         const recordHash = hash(record)
         if (recordid in newChangeHash) {
           if (newChangeHash[recordid] === recordHash) {
@@ -671,6 +692,7 @@ ApiSchema.methods.invokeStream = function invokeApiStream (model) {
           batch,
           lat,
           lon,
+          header: JSON.stringify(strippedData)
         })
         newChangeHash[recordid] = recordHash
       })

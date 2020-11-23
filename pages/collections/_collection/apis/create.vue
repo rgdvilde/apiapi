@@ -72,7 +72,10 @@
         </v-card>
       </v-col>
     </v-row>
-    <v-container
+    <fragment-component
+      v-if="validated"
+      @complete="fragmentationInfoComplete" />
+    <!--     <v-container
       v-if="validated"
       fluid>
       <v-switch
@@ -81,7 +84,7 @@
       <v-text-field
         v-if="basePathSelectorVisible"
         @change="setBasePath" />
-    </v-container>
+    </v-container> -->
     <v-container
       v-if="validated"
       fluid>
@@ -130,6 +133,7 @@ import ConstraintsValidator from '~/components/ConstraintsValidator.vue'
 import DeviceStepper from '~/components/DeviceStepper.vue'
 import RmlEditor from '~/components/RmlEditor.vue'
 import YarrrmlEditor from '~/components/YarrrmlEditor.vue'
+import FragmentComponent from '~/components/FragmentComponent.vue'
 import ShaclMapperWrapper from '~/components/ShaclMapperWrapper.vue'
 import { mutationTypes, actionTypes, getterTypes as apiGetters } from '~/store/api'
 import { getterTypes as collectionGetters, actionTypes as collectionActions } from '~/store/collections'
@@ -144,7 +148,8 @@ export default {
     RmlEditor,
     YarrrmlEditor,
     ConstraintsValidator,
-    ShaclMapperWrapper
+    ShaclMapperWrapper,
+    FragmentComponent
   },
   mixins: [page],
   head () {
@@ -190,9 +195,12 @@ export default {
         authMethod: this.authMethod,
         forCollection: this.forCollection,
         rml: this.rml,
-        yarrrml: this.yarrrml
+        yarrrml: this.yarrrml,
+        lat: this.lat,
+        recordId: this.recordId,
+        lon: this.lon
       }
-      if (this.basePathSelectorVisible) {
+      if (this.basePath !== '') {
         data.dataPath = this.basePath
       }
       return data
@@ -305,6 +313,13 @@ export default {
       } else {
         this.dialogVisible = true
       }
+    },
+    fragmentationInfoComplete (fragmentationInfo) {
+      const { basePath, recordId, lat, lon } = fragmentationInfo
+      this.basePath = basePath
+      this.recordId = recordId
+      this.lat = lat
+      this.lon = lon
     },
     submitted (success) {
       if (!success) {

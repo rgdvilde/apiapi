@@ -107,9 +107,11 @@ export default {
       console.log(shacl)
       this.shacl = shacl
     },
-    contextCompleted (context) {
-      console.log(context)
+    contextCompleted (result) {
+      const { context, latPath, lonPath } = result
       this.context = context
+      this.latPath = latPath
+      this.lonPath = lonPath
     },
     savePaths () {
       this.saveDataPaths({
@@ -117,7 +119,9 @@ export default {
         name: this.modelName,
         description: this.modelDescription,
         shacl: this.shacl,
-        context: this.context
+        context: this.context,
+        latPath: this.latPath,
+        lonPath: this.lonPath
       }).then(() => {
         this.$router.push({ name: 'index' })
       })

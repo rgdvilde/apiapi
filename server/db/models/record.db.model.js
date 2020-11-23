@@ -19,7 +19,7 @@ const RecordSchema = new mongoose.Schema({
   },
   lat: {
     type: Number,
-    required:false
+    required: false
   },
   lon: {
     type: Number,
@@ -29,11 +29,15 @@ const RecordSchema = new mongoose.Schema({
     type: Number,
     required: true
   },
-  expireAt: {
-    type: Date,
-    default: Date.now,
-    // index: { expires: '100m' }
+  header: {
+    type: String,
+    required: false
   }
+  // expireAt: {
+  //   type: Date,
+  //   default: Date.now,
+  // index: { expires: '100m' }
+  // }
 })
 
 const RecordModel = mongoose.model('Record', RecordSchema)

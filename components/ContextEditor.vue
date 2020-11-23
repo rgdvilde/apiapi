@@ -1,5 +1,11 @@
 <template>
   <div class="contexteditor">
+    <v-text-field
+      v-model="lonS"
+      label="Lon" />
+    <v-text-field
+      v-model="latS"
+      label="Lat" />
     <v-textarea
       @change="setContext"
       name="input-7-1"
@@ -18,14 +24,23 @@
 
 export default {
   name: 'ContextEditor',
+  data () {
+    return {
+      context: '',
+      latS: '',
+      lonS: ''
+    }
+  },
   methods: {
     complete () {
-      console.log(this.context)
-      this.$emit('complete', this.context)
+      this.$emit('complete', {
+        context: this.context,
+        latPath: this.latS,
+        lonPath: this.lonS
+      })
     },
     setContext (context) {
       if (this.context !== context) {
-        console.log(context)
         this.context = context
       }
     }
