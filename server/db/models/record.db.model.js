@@ -32,7 +32,7 @@ const RecordSchema = new mongoose.Schema({
   expireAt: {
     type: Date,
     default: Date.now,
-    index: { expires: '100m' }
+    // index: { expires: '100m' }
   }
 })
 

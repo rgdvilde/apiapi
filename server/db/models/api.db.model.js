@@ -23,7 +23,6 @@ const PATH_TYPES = {
 const EXPAND = true
 const COMPACT = false
 const PAGESIZE = 5
-const PAGE = 0
 
 module.exports.PATH_TYPES = PATH_TYPES
 
@@ -164,7 +163,7 @@ const transformStream = (obj, collection,c, meta) => {
           en['dcterms:isVersionOf'] = res[0]
           if(c !== ''){
             if(COMPACT){
-              return jsonld.compact(en, c).then(cdoc => {
+              return jsonld.compact(en, JSON.parse(c)).then(cdoc => {
                 return(cdoc)
               })
               .catch(err => console.log(err))
@@ -272,49 +271,158 @@ ApiSchema.methods.raw = async function getRawData () {
   return data
 }
 
-ApiSchema.methods.getStream = function getApiStream (collection, model,x,y,z) {
+ApiSchema.methods.getStream = function getApiStream (collection, model,x,y,z, page) {
   const { records, rml, name, header } = this
   const { base } = collection
   const xyz = x && y && z
   x = parseInt(x)
   y = parseInt(y)
   z = parseInt(z)
+  if (!page) {
+    page = 0
+  }
+  else {
+    page = parseInt(page)
+  }
   let  cordinates = {}
   if (x && y && z) {
     cordinates = calculateSquare(x,y,z)
   }
-  const recordQuery = () => {
+  const recordQuery = (skip, limit) => {
+    if(!skip){
+      skip = 0
+    }
+    if(limit){
     return ApiModel.aggregate(
-    [
-      { "$lookup": {
-        "from": RecordModel.collection.name,
-        "localField": "records",
-        "foreignField": "_id",
-        "as": "records"
-      }},
-      { "$unwind": "$records" },
-      { "$match": {
-       "records._id": { $in: records}
-      } 
-      },
-      {
-        "$sort": { "records.batch": 1, "records.id": 1 }
-      },
-      {"$limit": (PAGE+1)*PAGESIZE},
-      {"$skip": PAGE*PAGESIZE},
-      { "$group": {
-        "_id": "$_id",
-        "records": { "$push": "$records" }
-      }}
-    ])
-    .exec()
-    .then(result => {
-      return result
-    })
+      [
+        { "$lookup": {
+          "from": RecordModel.collection.name,
+          "localField": "records",
+          "foreignField": "_id",
+          "as": "records"
+        }},
+        { "$unwind": "$records" },
+        { "$match": {
+         "records._id": { $in: records}
+        } 
+        },
+        {
+          "$sort": { "records.batch": 1, "records.id": 1 }
+        },
+        {"$limit": limit},
+        {"$skip": skip},
+        { "$group": {
+          "_id": "$_id",
+          "records": { "$push": "$records" }
+        }}
+      ])
+      .exec()
+      .then(result => {
+        return result
+      })
+    }
+    else{
+    return ApiModel.aggregate(
+      [
+        { "$lookup": {
+          "from": RecordModel.collection.name,
+          "localField": "records",
+          "foreignField": "_id",
+          "as": "records"
+        }},
+        { "$unwind": "$records" },
+        { "$match": {
+         "records._id": { $in: records}
+        } 
+        },
+        {
+          "$sort": { "records.batch": 1, "records.id": 1 }
+        },
+        {"$skip": skip},
+        { "$group": {
+          "_id": "$_id",
+          "records": { "$push": "$records" }
+        }}
+      ])
+      .exec()
+      .then(result => {
+        return result
+      })
+    }
+
+  }
+
+  const recordQueryXYZ = (x,y,z,skip,limit) => {
+    if(!skip){
+      skip = 0
+    }
+    cor = calculateSquare(x,y,z)
+    if(limit){
+      return ApiModel.aggregate(
+      [
+        { "$lookup": {
+          "from": RecordModel.collection.name,
+          "localField": "records",
+          "foreignField": "_id",
+          "as": "records"
+        }},
+        { "$unwind": "$records" },
+        { "$match": {
+         "records._id": { $in: records},
+         "records.lon": { $gt: cor['00'][0] , $lt: cor['10'][0] },
+         "records.lat": { $gt: cor['00'][1], $lt: cor['01'][1] },
+        }},
+        {
+          "$sort": { "records.batch": -1, "records.id": 1 }
+        },
+        {"$limit": limit},
+        {"$skip": skip},
+        { "$group": {
+          "_id": "$_id",
+          "records": { "$push": "$records" }
+        }}
+      ])
+      .exec()
+      .then(result => {
+        console.log(result)
+        return result
+      }) 
+    }
+    else{
+    return ApiModel.aggregate(
+      [
+        { "$lookup": {
+          "from": RecordModel.collection.name,
+          "localField": "records",
+          "foreignField": "_id",
+          "as": "records"
+        }},
+        { "$unwind": "$records" },
+        { "$match": {
+         "records._id": { $in: records},
+         "records.lon": { $gt: cor['00'][0] , $lt: cor['10'][0] },
+         "records.lat": { $gt: cor['00'][1], $lt: cor['01'][1] },
+        }},
+        {
+          "$sort": { "records.batch": -1, "records.id": 1 }
+        },
+        {"$skip": skip},
+        { "$group": {
+          "_id": "$_id",
+          "records": { "$push": "$records" }
+        }}
+      ])
+      .exec()
+      .then(result => {
+        console.log(result)
+        return result
+      })
+    }
+
   }
 
   const resultQueryXYZcount = (x,y,z) => {
-    return recordQueryXYZ(x,y,z).then(result => {
+    return recordQueryXYZ(x,y,z,0).then(result => {
       if(!result[0]){
         return 0
       }
@@ -324,41 +432,18 @@ ApiSchema.methods.getStream = function getApiStream (collection, model,x,y,z) {
     })
   }
 
-  const recordQueryXYZ = (x,y,z) => {
-    console.log(x,y,z)
-    console.log(records)
-    cor = calculateSquare(x,y,z)
-    return ApiModel.aggregate(
-    [
-      { "$lookup": {
-        "from": RecordModel.collection.name,
-        "localField": "records",
-        "foreignField": "_id",
-        "as": "records"
-      }},
-      { "$unwind": "$records" },
-      { "$match": {
-       "records._id": { $in: records},
-       "records.lon": { $gt: cor['00'][0] , $lt: cor['10'][0] },
-       "records.lat": { $gt: cor['00'][1], $lt: cor['01'][1] },
-      }},
-      {
-        "$sort": { "records.batch": 1, "records.id": 1 }
-      },
-      {"$limit": (PAGE+1)*PAGESIZE},
-      {"$skip": PAGE*PAGESIZE},
-      { "$group": {
-        "_id": "$_id",
-        "records": { "$push": "$records" }
-      }}
-    ])
-    .exec()
-    .then(result => {
-      console.log(result)
-      return result
+  const resultQuerycount = (x,y,z) => {
+    return recordQuery(x,y,z,0).then(result => {
+      if(!result[0]){
+        return 0
+      }
+      else {
+        return result[0]['records'].length
+      }
     })
   }
-  const query = (x && y && z) ? recordQueryXYZ(x,y,z) : recordQuery()
+
+  const query = (x && y && z) ? recordQueryXYZ(x,y,z,page*PAGESIZE,(page+1)*PAGESIZE) : recordQuery(page*PAGESIZE,(page+1)*PAGESIZE)
   return query.then(result => {
       // "tags" is now filtered by condition and "joined"
       let erecords = []
@@ -383,64 +468,129 @@ ApiSchema.methods.getStream = function getApiStream (collection, model,x,y,z) {
           'records': recordDict[key]
         }
       })
+      const promiseWrapper = (promise,name)=> {
+        return promise.then(result=>{
+          return {
+            name,
+            result
+          }
+        })
+      }
 
+      const NodeIdBase = base + '/api/data/' + collection._id
+      const nextPageURI = NodeIdBase + '/' + (page+1) + '/stream' + (xyz ? '/' + z + '/' + x + '/' + y : '')
+      const previousPageURI = NodeIdBase +  ((page-1)===0? '': '/'+(page-1)) + '/stream' + (xyz ? '/' + z + '/' + x + '/' + y : '')
       const traverseNodeIdBase = base + '/api/data/' + collection._id + '/stream/'
       const metaPromiseQueue = []
+      const pagePromise = new Promise((resolve,reject)=>{
+        const calcPageCount = (page, size, total) => {
+          const before = page*size
+          const after = (total - (page+1)*size)>0?total - (page+1)*size:0
+          return [before, after]
+        }
+        if (xyz){
+          resultQueryXYZcount(x,y,z).then(result=>{
+            resolve(calcPageCount(page,PAGESIZE,result))
+          })
+        }
+        else {
+          resultQuerycount().then(result=>{
+            resolve(calcPageCount(page,PAGESIZE,result))
+          })
+        }
+      })
       if(xyz){
-        metaPromiseQueue.push(resultQueryXYZcount(x-1,y,z))
-        metaPromiseQueue.push(resultQueryXYZcount(x+1,y,z))
-        metaPromiseQueue.push(resultQueryXYZcount(x,y+1,z))
-        metaPromiseQueue.push(resultQueryXYZcount(x,y-1,z))
+        metaPromiseQueue.push(promiseWrapper(resultQueryXYZcount(x-1,y,z),'lessLon'))
+        metaPromiseQueue.push(promiseWrapper(resultQueryXYZcount(x+1,y,z), 'greaterLon'))
+        metaPromiseQueue.push(promiseWrapper(resultQueryXYZcount(x,y+1,z), 'lessLat'))
+        metaPromiseQueue.push(promiseWrapper(resultQueryXYZcount(x,y-1,z), 'greaterLat'))
       }
+      metaPromiseQueue.push(promiseWrapper(pagePromise,'Page'))
       return Promise.all(metaPromiseQueue).then(result => {
         console.log(result)
+        resultMap = {}
+        result.forEach(entry => {
+          resultMap[entry['name']] = entry['result']
+        })
         let meta = {}
-        if(xyz) {
-        meta = {
-          'xyz': [x,y,z],
-          'tree:relation' : [
-          {
-              "@type": "tree:LessThanRelation",
-              "tree:node": traverseNodeIdBase + z + '/' + (x-1) + '/' + y,
-              "sh:path": "pathToLocationLon",
-              "tree:value": cordinates['00'][0],
-              "tree:remainingItems": result[0]
-          },
-          {
-              "@type": "tree:GreaterThanRelation",
-              "tree:node": traverseNodeIdBase + z + '/' + (x+1) + '/' + y,
-              "sh:path": "pathToLocationLon",
-              "tree:value": cordinates['10'][0],
-              "tree:remainingItems": result[1]
-          },
-          {
-              "@type": "tree:LessThanRelation",
-              "tree:node": traverseNodeIdBase + z + '/' + x + '/' + (y+1),
-              "sh:path": "pathToLocationLat",
-              "tree:value": cordinates['00'][1],
-              "tree:remainingItems": result[2]
-          },
-          {
-              "@type": "tree:GreaterThanRelation",
-              "tree:node": traverseNodeIdBase + z + '/' + x + '/' + (y-1),
-              "sh:path": "pathToLocationLat",
-              "tree:value": cordinates['01'][1],
-              "tree:remainingItems": result[3]
+        if (resultMap['Page'][0] > 0){
+          meta = {
+            ...meta,
+            'tree:relation': [
+            ... (meta['tree:relation'] ? meta['tree:relation'] : []) ,
+            {
+                "@type": "tree:LessThanRelation",
+                "tree:node": previousPageURI,
+                "sh:path": "prov:generatedAtTime",
+                "tree:value": "2020-11-12T16:33:11.000Z",
+                "tree:remainingItems": resultMap['Page'][0]
+            }
+            ]
           }
-        ]
         }
+        if (resultMap['Page'][1] > 0){
+          meta = {
+            ...meta,
+            'tree:relation': [
+            ... (meta['tree:relation'] ? meta['tree:relation'] : []) ,
+            {
+                "@type": "tree:GreaterThanRelation",
+                "tree:node": nextPageURI,
+                "sh:path": "prov:generatedAtTime",
+                "tree:value": "2020-11-13T14:48:46.000Z",
+                "tree:remainingItems": resultMap['Page'][1]
+            }
+            ]
+          }  
+        }
+        if(xyz) {
+          meta = {
+            ...meta,
+            'xyz': [x,y,z],
+            'tree:relation' : [
+            ... (meta['tree:relation'] ? meta['tree:relation'] : []) ,
+            {
+                "@type": "tree:LessThanRelation",
+                "tree:node": traverseNodeIdBase + z + '/' + (x-1) + '/' + y,
+                "sh:path": "pathToLocationLon",
+                "tree:value": cordinates['00'][0],
+                "tree:remainingItems": resultMap['lessLon']
+            },
+            {
+                "@type": "tree:GreaterThanRelation",
+                "tree:node": traverseNodeIdBase + z + '/' + (x+1) + '/' + y,
+                "sh:path": "pathToLocationLon",
+                "tree:value": cordinates['10'][0],
+                "tree:remainingItems": resultMap['greaterLon']
+            },
+            {
+                "@type": "tree:LessThanRelation",
+                "tree:node": traverseNodeIdBase + z + '/' + x + '/' + (y+1),
+                "sh:path": "pathToLocationLat",
+                "tree:value": cordinates['00'][1],
+                "tree:remainingItems": resultMap['lessLat']
+            },
+            {
+                "@type": "tree:GreaterThanRelation",
+                "tree:node": traverseNodeIdBase + z + '/' + x + '/' + (y-1),
+                "sh:path": "pathToLocationLat",
+                "tree:value": cordinates['01'][1],
+                "tree:remainingItems": resultMap['greaterLat']
+            }
+          ]
+          }
         }
 
         console.log(meta)
         return mapRMLsplit(dataDict, rml, rmlmapperPath, tempFolderPath, name).then((out) => {
           const outconcat = [].concat.apply([], out);
           if (EXPAND) {
-            return transformStream(expandDepth(outconcat),collection,JSON.parse(context),meta).then(res=> {
+            return transformStream(expandDepth(outconcat),collection,context,meta).then(res=> {
               return res
             })
           }
           else {
-            return transformStream(outconcat,collection,JSON.parse(context),meta).then(res=> {
+            return transformStream(outconcat,collection,context,meta).then(res=> {
               return res
             })
           }
@@ -450,7 +600,7 @@ ApiSchema.methods.getStream = function getApiStream (collection, model,x,y,z) {
     })
 }
 
-const getDeepKeys = (obj, suffix) => {
+const relabelBlankNodes = (obj, suffix) => {
     var keys = [];
     for(var key in obj) {
       if(key==='@id'){
@@ -461,7 +611,7 @@ const getDeepKeys = (obj, suffix) => {
       }
         keys.push(key);
         if(typeof obj[key] === "object") {
-            var subkeys = getDeepKeys(obj[key], suffix);
+            var subkeys = relabelBlankNodes(obj[key], suffix);
             keys = keys.concat(subkeys.map(function(subkey) {
                 return key + "." + subkey;
             }));
@@ -474,7 +624,7 @@ const mapRMLsplit = (dataDict,rml,rmlmapperPath,tempFolderPath,name) => {
   return Promise.all(Object.keys(dataDict).map(key => {
     const data = dataDict[key]
     return mapRML(data, rml, rmlmapperPath, tempFolderPath, name).then(out => {
-      getDeepKeys(out,key)
+      relabelBlankNodes(out,key)
       return out
     })
   }))
@@ -514,7 +664,7 @@ ApiSchema.methods.invokeStream = function invokeApiStream (model) {
           }
         }
         changedObjects.push({
-          'id': recordid + '?generatedAtTime=' + new Date().toISOString(),
+          'id': recordid + '?generatedAtTime=' + new Date(batch).toISOString(),
           'hash': recordHash,
           'content': JSON.stringify(record),
           'typeOf': recordid,
