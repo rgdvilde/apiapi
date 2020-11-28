@@ -8,6 +8,7 @@ const dataModelRoutes = require('./datamodel.routes')
 const uploadRoutes = require('./upload.routes')
 const validatorRoutes = require('./validator.routes')
 const mapperRoutes = require('./mapper.routes')
+const contextRoutes = require('./context.routes')
 
 const router = express.Router()
 
@@ -19,6 +20,7 @@ router.use('/models', dataModelRoutes)
 router.use('/uploads', uploadRoutes)
 router.use('/validate', validatorRoutes)
 router.use('/map', mapperRoutes)
+router.use('/context', contextRoutes)
 
 /**
  * Used to circumvent CORS issues.

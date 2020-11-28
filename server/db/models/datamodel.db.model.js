@@ -14,17 +14,22 @@ const DataModelSchema = new mongoose.Schema({
     type: String,
     required: true
   },
-  context: {
+  localContext: {
     type: String,
-    default: '',
+    default: '[]',
+    required: false
+  },
+  globalContext: {
+    type: String,
+    default: '[]',
     required: false
   },
   lonPath: {
-    type: String,
+    type: Array,
     required: false
   },
   latPath: {
-    type: String,
+    type: Array,
     required: false
   },
   paths: [

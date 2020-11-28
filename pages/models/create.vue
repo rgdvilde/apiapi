@@ -89,7 +89,8 @@ export default {
       dataPaths: [],
       modelName: '',
       modelDescription: '',
-      context: []
+      localContext: [],
+      globalContext: []
     }
   },
   mounted () {
@@ -104,14 +105,14 @@ export default {
       this.dataPaths = paths
     },
     shaclCompleted (shacl) {
-      console.log(shacl)
       this.shacl = shacl
     },
     contextCompleted (result) {
-      const { context, latPath, lonPath } = result
-      this.context = context
-      this.latPath = latPath
-      this.lonPath = lonPath
+      const { localContext, globalContext, latPath, lonPath } = result
+      this.localContext = localContext
+      this.globalContext = globalContext
+      this.latPath = latPath.split(' ')
+      this.lonPath = lonPath.split(' ')
     },
     savePaths () {
       this.saveDataPaths({
@@ -119,7 +120,8 @@ export default {
         name: this.modelName,
         description: this.modelDescription,
         shacl: this.shacl,
-        context: this.context,
+        localContext: this.localContext,
+        globalContext: this.globalContext,
         latPath: this.latPath,
         lonPath: this.lonPath
       }).then(() => {

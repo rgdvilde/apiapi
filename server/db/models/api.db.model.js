@@ -22,7 +22,7 @@ const PATH_TYPES = {
 }
 
 const EXPAND = true
-const COMPACT = false
+const COMPACT = true
 const PAGESIZE = 5
 
 module.exports.PATH_TYPES = PATH_TYPES
@@ -162,73 +162,144 @@ const mapDef = (data, paths, name) => {
   })
 }
 
-const transformStream = (obj, collection, c, meta) => {
-  const { base } = collection
-  return new Promise(function (myResolve, myReject) {
-    console.log('transformStream')
-    return Promise.all(obj.map((en) => {
-      if ('@id' in en) {
-        const id = en['@id']
-        if (!(id.slice(0, 2) === '_:')) {
-          en['@id'] = decodeURIComponent(id)
-          const reg = /.+?(?=\\?generatedAtTime=)/
-          const res = reg.exec(decodeURIComponent(id))
-          en['dcterms:isVersionOf'] = res[0]
-          if (c !== '') {
-            if (COMPACT) {
-              return jsonld.compact(en, JSON.parse(c)).then((cdoc) => {
-                return (cdoc)
-              })
-                .catch(err => console.log(err))
-            } else {
-              en['@context'] = c
-            }
-          }
-        }
-      }
-      return (en)
-    }))
-      .then((included) => {
-        const context = [{
-          'prov': 'http://www.w3.org/ns/prov#',
-          'tree': 'https://w3id.org/tree#',
-          'sh': 'http://www.w3.org/ns/shacl#',
-          'dcterms': 'http://purl.org/dc/terms/',
-          'tree:member': {
-            '@type': '@id'
-          },
-          'memberOf': {
-            '@reverse': 'tree:member',
-            '@type': '@id'
-          },
-          'tree:node': {
-            '@type': '@id'
-          }
-        }
-        ]
-        let suf = ''
-        if (meta.xyz) {
-          suf = '/' + meta.xyz[2] + '/' + meta.xyz[0] + '/' + meta.xyz[1]
-        }
-        const nodeId = base + '/api/data/' + collection._id + '?SampledAt=' + collection.lastSampled.toISOString() + '/stream' + suf
-        const nodePartOf = base + '/api/data/' + collection._id + '/stream'
-        const out = {
-          '@context': context,
-          '@included': included,
-          '@id': nodeId,
-          '@type': 'tree:Node',
-          'dcterms:isPartOf': {
-            '@id': nodePartOf,
-            '@type': 'tree:Collection'
-          }
-        }
-        if (meta['tree:relation']) {
-          out['tree:relation'] = meta['tree:relation']
-        }
-        myResolve(out)
-      })
-  })
+const notBlank = (obj) => {
+  if ('@id' in obj) {
+    const {'@id': id} = obj
+    if (!(id.slice(0, 2) === '_:')) {
+      return true
+    }
+  }
+  return false
 }
+
+const transformStream = async (obj, collection, lc, gc, meta) => {
+  const { base, '_id': collectionId } = collection
+  const versionedData = obj.map((en)=>{
+      if (notBlank(en)) {
+        const {'@id': id} = en
+        en['@id'] = decodeURIComponent(id)
+        const reg = /.+?(?=\\?generatedAtTime=)/
+        const res = reg.exec(decodeURIComponent(id))
+        en['dcterms:isVersionOf'] = res[0]
+      }
+      return en
+  })
+  const globalContext = [
+  base + '/api/context/g/' + collectionId,
+  {
+    'prov': 'http://www.w3.org/ns/prov#',
+    'tree': 'https://w3id.org/tree#',
+    'sh': 'http://www.w3.org/ns/shacl#',
+    'dcterms': 'http://purl.org/dc/terms/',
+    'tree:member': {
+      '@type': '@id'
+    },
+    'memberOf': {
+      '@reverse': 'tree:member',
+      '@type': '@id'
+    },
+    'tree:node': {
+      '@type': '@id'
+    }
+  }]
+  let suf = ''
+  if (meta.xyz) {
+    suf = '/' + meta.xyz[2] + '/' + meta.xyz[0] + '/' + meta.xyz[1]
+  }
+  const nodeId = base + '/api/data/' + collection._id + '?SampledAt=' + collection.lastSampled.toISOString() + '/stream' + suf
+  const nodePartOf = base + '/api/data/' + collection._id + '/stream'
+  const compactedData = await Promise.all(versionedData.map(async (en) => {
+    if(notBlank(en)){
+      en = await jsonld.compact(en, JSON.parse(lc))
+      en['@context'] = base + '/api/context/l/' + collectionId
+    }
+    return en
+  }))
+  const out = {
+    '@context': globalContext,
+    '@included': compactedData,
+    '@id': nodeId,
+    '@type': 'tree:Node',
+    'dcterms:isPartOf': {
+      '@id': nodePartOf,
+      '@type': 'tree:Collection'
+    }
+  }
+  if (meta['tree:relation']) {
+    out['tree:relation'] = meta['tree:relation']
+  }
+  return out
+
+}
+
+// const transformStream = (obj, collection, c, meta) => {
+//   const { base } = collection
+//   return new Promise(function (myResolve, myReject) {
+//     console.log('transformStream')
+//     return Promise.all(obj.map((en) => {
+//       if ('@id' in en) {
+//         const id = en['@id']
+//         if (!(id.slice(0, 2) === '_:')) {
+//           en['@id'] = decodeURIComponent(id)
+//           const reg = /.+?(?=\\?generatedAtTime=)/
+//           const res = reg.exec(decodeURIComponent(id))
+//           en['dcterms:isVersionOf'] = res[0]
+//           if (c !== '') {
+//             if (COMPACT) {
+//               return jsonld.compact(en, JSON.parse(c)).then((cdoc) => {
+//                 return (cdoc)
+//               })
+//                 .catch(err => console.log(err))
+//             } else {
+//               console.log(c)
+//               en['@context'] = JSON.parse(c)
+//             }
+//           }
+//         }
+//       }
+//       return (en)
+//     }))
+//       .then((included) => {
+//         const context = [{
+//           'prov': 'http://www.w3.org/ns/prov#',
+//           'tree': 'https://w3id.org/tree#',
+//           'sh': 'http://www.w3.org/ns/shacl#',
+//           'dcterms': 'http://purl.org/dc/terms/',
+//           'tree:member': {
+//             '@type': '@id'
+//           },
+//           'memberOf': {
+//             '@reverse': 'tree:member',
+//             '@type': '@id'
+//           },
+//           'tree:node': {
+//             '@type': '@id'
+//           }
+//         }
+//         ]
+//         let suf = ''
+//         if (meta.xyz) {
+//           suf = '/' + meta.xyz[2] + '/' + meta.xyz[0] + '/' + meta.xyz[1]
+//         }
+//         const nodeId = base + '/api/data/' + collection._id + '?SampledAt=' + collection.lastSampled.toISOString() + '/stream' + suf
+//         const nodePartOf = base + '/api/data/' + collection._id + '/stream'
+//         const out = {
+//           '@context': context,
+//           '@included': included,
+//           '@id': nodeId,
+//           '@type': 'tree:Node',
+//           'dcterms:isPartOf': {
+//             '@id': nodePartOf,
+//             '@type': 'tree:Collection'
+//           }
+//         }
+//         if (meta['tree:relation']) {
+//           out['tree:relation'] = meta['tree:relation']
+//         }
+//         myResolve(out)
+//       })
+//   })
+// }
 
 const expandDepth = (j) => {
   linkMap = {}
@@ -282,7 +353,7 @@ ApiSchema.methods.raw = async function getRawData () {
 
 ApiSchema.methods.getStream = function getApiStream (collection, model, x, y, z, page) {
   const { records, rml, name, header } = this
-  console.log(header)
+  console.log(model)
   const { base } = collection
   const xyz = x && y && z
   x = parseInt(x)
@@ -391,7 +462,6 @@ ApiSchema.methods.getStream = function getApiStream (collection, model, x, y, z,
         ])
         .exec()
         .then((result) => {
-          console.log(result)
           return result
         })
     } else {
@@ -420,7 +490,6 @@ ApiSchema.methods.getStream = function getApiStream (collection, model, x, y, z,
         ])
         .exec()
         .then((result) => {
-          console.log(result)
           return result
         })
     }
@@ -448,13 +517,14 @@ ApiSchema.methods.getStream = function getApiStream (collection, model, x, y, z,
 
   const query = (x && y && z) ? recordQueryXYZ(x, y, z, page * PAGESIZE, (page + 1) * PAGESIZE) : recordQuery(page * PAGESIZE, (page + 1) * PAGESIZE)
   return query.then((result) => {
-    console.log(result)
     // "tags" is now filtered by condition and "joined"
     let erecords = []
     if (result[0]) {
       erecords = result[0].records
     }
-    const { context, latPath: shaclLatPath, lonPath: shaclLonPath } = model
+    const { localContext, globalContext, latPath: shaclLatPath, lonPath: shaclLonPath } = model
+    console.log(localContext)
+    console.log(globalContext)
     const recordDict = {}
     // min en max
     const timeMM = []
@@ -526,7 +596,6 @@ ApiSchema.methods.getStream = function getApiStream (collection, model, x, y, z,
     }
     metaPromiseQueue.push(promiseWrapper(pagePromise, 'Page'))
     return Promise.all(metaPromiseQueue).then((result) => {
-      console.log(result)
       resultMap = {}
       result.forEach((entry) => {
         resultMap[entry.name] = entry.result
@@ -540,7 +609,9 @@ ApiSchema.methods.getStream = function getApiStream (collection, model, x, y, z,
             {
               '@type': 'tree:LessThanOrEqualRelation',
               'tree:node': previousPageURI,
-              'sh:path': 'prov:generatedAtTime',
+              'sh:path': {
+                '@list': ['prov:generatedAtTime']
+              },
               'tree:value': new Date(timeMM[0]).toISOString(),
               'tree:remainingItems': resultMap.Page[0]
             }
@@ -555,7 +626,9 @@ ApiSchema.methods.getStream = function getApiStream (collection, model, x, y, z,
             {
               '@type': 'tree:GreaterOrEqualThanRelation',
               'tree:node': nextPageURI,
-              'sh:path': 'prov:generatedAtTime',
+              'sh:path': {
+                '@list': ['prov:generatedAtTime']
+              },
               'tree:value': new Date(timeMM[1]).toISOString(),
               'tree:remainingItems': resultMap.Page[1]
             }
@@ -563,6 +636,12 @@ ApiSchema.methods.getStream = function getApiStream (collection, model, x, y, z,
         }
       }
       if (xyz) {
+        const parsedShaclLonPath = {
+          '@list': shaclLonPath
+        }
+        const parsedShaclLatPath = {
+          '@list': shaclLatPath
+        }
         meta = {
           ...meta,
           'xyz': [x, y, z],
@@ -571,28 +650,28 @@ ApiSchema.methods.getStream = function getApiStream (collection, model, x, y, z,
             {
               '@type': 'tree:LessThanRelation',
               'tree:node': traverseNodeIdBase + z + '/' + (x - 1) + '/' + y,
-              'sh:path': shaclLonPath,
+              'sh:path': parsedShaclLonPath,
               'tree:value': cordinates['00'][0],
               'tree:remainingItems': resultMap.lessLon
             },
             {
               '@type': 'tree:GreaterThanRelation',
               'tree:node': traverseNodeIdBase + z + '/' + (x + 1) + '/' + y,
-              'sh:path': shaclLonPath,
+              'sh:path': parsedShaclLonPath,
               'tree:value': cordinates['10'][0],
               'tree:remainingItems': resultMap.greaterLon
             },
             {
               '@type': 'tree:LessThanRelation',
               'tree:node': traverseNodeIdBase + z + '/' + x + '/' + (y + 1),
-              'sh:path': shaclLatPath,
+              'sh:path': parsedShaclLatPath,
               'tree:value': cordinates['00'][1],
               'tree:remainingItems': resultMap.lessLat
             },
             {
               '@type': 'tree:GreaterThanRelation',
               'tree:node': traverseNodeIdBase + z + '/' + x + '/' + (y - 1),
-              'sh:path': shaclLatPath,
+              'sh:path': parsedShaclLatPath,
               'tree:value': cordinates['01'][1],
               'tree:remainingItems': resultMap.greaterLat
             }
@@ -603,11 +682,11 @@ ApiSchema.methods.getStream = function getApiStream (collection, model, x, y, z,
       return mapRMLsplit(dataDict, rml, rmlmapperPath, tempFolderPath, name).then((out) => {
         const outconcat = [].concat.apply([], out)
         if (EXPAND) {
-          return transformStream(expandDepth(outconcat), collection, context, meta).then((res) => {
+          return transformStream(expandDepth(outconcat), collection, localContext, globalContext, meta).then((res) => {
             return res
           })
         } else {
-          return transformStream(outconcat, collection, context, meta).then((res) => {
+          return transformStream(outconcat, collection, localContext, globalContext, meta).then((res) => {
             return res
           })
         }
@@ -675,9 +754,6 @@ ApiSchema.methods.invokeStream = function invokeApiStream (model) {
         const lat = jp.query(record,latpath)[0]
         const lon = jp.query(record,lonpath)[0]
         const recordid = jp.query(record,idpath)[0]
-        console.log(lat)
-        console.log(lon)
-        console.log(recordid)
         const recordHash = hash(record)
         if (recordid in newChangeHash) {
           if (newChangeHash[recordid] === recordHash) {

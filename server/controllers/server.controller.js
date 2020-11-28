@@ -4,7 +4,7 @@ const CollectionModel = require('../db/models/collection.model')
 const RecordModel = require('../db/models/record.db.model')
 
 const delay = 3000
-const samplers = {}
+let samplers = {}
 
 const sampleApis = (collectionId) => {
   return CollectionModel.findById(collectionId).then((res) => {
@@ -69,6 +69,7 @@ module.exports = {
          	})
     	})
   	})
+    samplers = {}
     res.json({ ok: 1 })
   }
 }

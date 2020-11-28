@@ -7,11 +7,17 @@
       v-model="latS"
       label="Lat" />
     <v-textarea
-      @change="setContext"
+      @change="setlContext"
       name="input-7-1"
       label="Default style"
       value=""
-      hint="Enter Shacl" />
+      hint="Enter local context" />
+    <v-textarea
+      @change="setgContext"
+      name="input-7-1"
+      label="Default style"
+      value=""
+      hint="Enter global context" />
     <v-btn
       @click="complete"
       color="success lighten-1"
@@ -26,7 +32,8 @@ export default {
   name: 'ContextEditor',
   data () {
     return {
-      context: '',
+      globalContext: '[]',
+      localContext: '[]',
       latS: '',
       lonS: ''
     }
@@ -34,14 +41,20 @@ export default {
   methods: {
     complete () {
       this.$emit('complete', {
-        context: this.context,
+        localContext: this.localContext,
+        globalContext: this.globalContext,
         latPath: this.latS,
         lonPath: this.lonS
       })
     },
-    setContext (context) {
-      if (this.context !== context) {
-        this.context = context
+    setlContext (localContext) {
+      if (this.localContext !== localContext) {
+        this.localContext = localContext
+      }
+    },
+    setgContext (globalContext) {
+      if (this.globalContext !== globalContext) {
+        this.globalContext = globalContext
       }
     }
 

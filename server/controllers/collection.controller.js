@@ -36,5 +36,29 @@ module.exports = {
       .exec()
       .then(response => res.json(response))
       .catch(err => next(err))
-  }
+  },
+  getLocalContext (req, res, next) {
+    const { id } = req.params
+    CollectionModel.findById(id)
+      .populate('model')
+      .exec()
+      .then(response => {
+        const {model} = response
+        const {localContext} = model
+        res.json(JSON.parse(localContext))
+      })
+      .catch(err => next(err))
+  },
+  getGlobalContext (req, res, next) {
+    const { id } = req.params
+    CollectionModel.findById(id)
+      .populate('model')
+      .exec()
+      .then(response => {
+        const {model} = response
+        const {globalContext} = model
+        res.json(JSON.parse(globalContext))
+      })
+      .catch(err => next(err))
+    }
 }
