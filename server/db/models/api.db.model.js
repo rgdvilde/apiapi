@@ -37,6 +37,7 @@ const ApiSchema = new mongoose.Schema({
     type: String,
     default: 'open'
   },
+  urls: [{type: Object}],
   url: {
     type: String,
     required: true
@@ -727,7 +728,7 @@ const mapRMLsplit = (dataDict, rml, rmlmapperPath, tempFolderPath, name) => {
 }
 
 ApiSchema.methods.invokeStream = function invokeApiStream (model) {
-  const { changeHash, url, rml, name, dataPath, recordId: idpath, lat: latpath, lon: lonpath } = this
+  const { changeHash, urls, rml, name, dataPath, recordId: idpath, lat: latpath, lon: lonpath } = this
   console.log('±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±')
   console.log('RECORDS')
   console.log('±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±')
@@ -805,11 +806,11 @@ ApiSchema.methods.invoke = function invokeApi (model) {
         return mapDef(data, paths, name)
       } else if (yarrrml == '') {
         return mapRML(data, rml, rmlmapperPath, tempFolderPath, name).then((out) => {
-          return out
+          return EXPAND ? expandDepth(out) : out
         })
       } else {
         return mapYARRRML(data, yarrrml, rmlmapperPath, tempFolderPath, name).then((out) => {
-          return out
+          return EXPAND ? expandDepth(out) : out
         })
       }
     })

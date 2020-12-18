@@ -13,8 +13,9 @@ const RecordSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  contents: [{ type: Object }],
   content: {
-    type: String,
+    type: Object,
     required: true
   },
   lat: {

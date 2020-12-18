@@ -26,7 +26,9 @@ module.exports = {
 	    	const { apis } = res
 	    	apis.forEach((apiId) => {
           ApiModel.findById(apiId).then((res) => {
+            console.log(res)
             res.invokeStream().then((res) => {
+              console.log(res)
               const { changeHash, changedObjects, header } = res
               const records = changedObjects.map((record) => {
                 return new RecordModel(record)
