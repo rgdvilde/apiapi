@@ -9,15 +9,7 @@ const RecordSchema = new mongoose.Schema({
     type: String,
     required: true
   },
-  hash: {
-    type: String,
-    required: true
-  },
-  contents: [{ type: Object }],
-  content: {
-    type: Object,
-    required: true
-  },
+  contents: { type: Object },
   lat: {
     type: Number,
     required: false

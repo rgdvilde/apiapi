@@ -10,5 +10,7 @@ router.get('/:id/stream', DataController.getStreamForCollection)
 router.get('/:id/stream/:z/:x/:y', DataController.getStreamForCollection)
 router.get('/:id/:page/stream', DataController.getStreamForCollection)
 router.get('/:id/:page/stream/:z/:x/:y', DataController.getStreamForCollection)
+router.get('/:id/stream/:unixtime', DataController.getStreamForCollection)
+router.get('/:id/stream/:z/:x/:y/:unixtime', DataController.getStreamForCollection)
 
 module.exports = router

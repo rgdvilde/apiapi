@@ -42,9 +42,9 @@ module.exports = {
     CollectionModel.findById(id)
       .populate('model')
       .exec()
-      .then(response => {
-        const {model} = response
-        const {localContext} = model
+      .then((response) => {
+        const { model } = response
+        const { localContext } = model
         res.json(JSON.parse(localContext))
       })
       .catch(err => next(err))
@@ -54,11 +54,11 @@ module.exports = {
     CollectionModel.findById(id)
       .populate('model')
       .exec()
-      .then(response => {
-        const {model} = response
-        const {globalContext} = model
+      .then((response) => {
+        const { model } = response
+        const { globalContext } = model
         res.json(JSON.parse(globalContext))
       })
       .catch(err => next(err))
-    }
+  }
 }

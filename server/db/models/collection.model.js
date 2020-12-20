@@ -52,7 +52,7 @@ CollectionSchema.methods.invokeApis = function invokeCollectionApis () {
     }).then(results => flattenDepth(results, 2))
 }
 
-CollectionSchema.methods.getApiStreams = function getCollectionApiStreams (x, y, z, page) {
+CollectionSchema.methods.getApiStreams = function getCollectionApiStreams (x, y, z, page, unixtime) {
   return DataModelModel.findById(this.model)
     .exec()
     .then((model) => {
@@ -65,7 +65,7 @@ CollectionSchema.methods.getApiStreams = function getCollectionApiStreams (x, y,
             return ApiModel.findById(api._id)
               .exec()
               .then((papi) => {
-                return papi.getStream(this, model, x, y, z, page)
+                return papi.getStream(this, model, x, y, z, page, unixtime)
               })
           }))
         })

@@ -13,68 +13,32 @@
                 :label="$t('formLabels.name')"
                 required />
 
-              <v-text-field
-                v-model="url"
-                :rules="urlRules"
-                :label="$t('formLabels.url')"
-                required />
-
-              <v-select
-                v-model="authMethod"
-                :items="authMethodItems"
-                :rules="authMethodRules"
-                :label="$t('formLabels.authMethod')"
-                required />
-
-              <v-text-field
-                v-model="apiKey"
-                v-if="authMethod === 'api_key'"
-                :label="$t('formLabels.apiKey')" />
-              <v-sheet v-if="authMethod === 'custom_headers'">
-                <v-row>
-                  <v-btn
-                    @click="addHeader"
-                    color="success lighten-1"
-                    class="mr-4">
-                    {{ $t('actions.addHeader') }}
-                  </v-btn>
-                  <v-btn
-                    @click="removeHeader"
-                    color="error lighten-1">
-                    {{ $t('actions.removeHeader') }}
-                  </v-btn>
-                </v-row>
-                <custom-header-input
-                  v-for="n in customHeaders"
-                  :key="n" />
-              </v-sheet>
+              <endpoint-cards
+                @update="updateEndpointCards" />
+              <v-card-actions>
+                <v-btn
+                  :disabled="!valid"
+                  @click="validate"
+                  color="primary"
+                  class="mr-4">
+                  {{ $t('actions.validate') }}
+                </v-btn>
+                <v-btn
+                  @click="reset"
+                  text
+                  class="mr-4">
+                  {{ $t('actions.reset') }}
+                </v-btn>
+                <v-progress-circular
+                  v-if="loadingData"
+                  indeterminate
+                  color="primary" />
+              </v-card-actions>
             </v-card-text>
-            <v-card-actions>
-              <v-btn
-                :disabled="!valid"
-                @click="validate"
-                color="primary"
-                class="mr-4">
-                {{ $t('actions.validate') }}
-              </v-btn>
-              <v-btn
-                @click="reset"
-                text
-                class="mr-4">
-                {{ $t('actions.reset') }}
-              </v-btn>
-              <v-progress-circular
-                v-if="loadingData"
-                indeterminate
-                color="primary" />
-            </v-card-actions>
           </v-form>
         </v-card>
       </v-col>
     </v-row>
-    <fragment-component
-      v-if="validated"
-      @complete="fragmentationInfoComplete" />
     <!--     <v-container
       v-if="validated"
       fluid>
@@ -127,14 +91,13 @@
 <script>
 import { mapGetters, mapActions, mapMutations } from 'vuex'
 import { get as getProp } from 'lodash'
-import CustomHeaderInput from '~/components/CustomHeaderInput.vue'
 import ConfirmCreationDialog from '~/components/ConfirmCreationDialog.vue'
 import ConstraintsValidator from '~/components/ConstraintsValidator.vue'
 import DeviceStepper from '~/components/DeviceStepper.vue'
 import RmlEditor from '~/components/RmlEditor.vue'
 import YarrrmlEditor from '~/components/YarrrmlEditor.vue'
-import FragmentComponent from '~/components/FragmentComponent.vue'
 import ShaclMapperWrapper from '~/components/ShaclMapperWrapper.vue'
+import EndpointCards from '~/components/EndpointCards.vue'
 import { mutationTypes, actionTypes, getterTypes as apiGetters } from '~/store/api'
 import { getterTypes as collectionGetters, actionTypes as collectionActions } from '~/store/collections'
 import page from '~/mixins/page'
@@ -142,14 +105,13 @@ import page from '~/mixins/page'
 export default {
   name: 'ApiCreate',
   components: {
-    CustomHeaderInput,
     DeviceStepper,
     ConfirmCreationDialog,
     RmlEditor,
     YarrrmlEditor,
     ConstraintsValidator,
     ShaclMapperWrapper,
-    FragmentComponent
+    EndpointCards
   },
   mixins: [page],
   head () {
@@ -182,8 +144,12 @@ export default {
       mapValidation: '',
       basePathSelectorVisible: false,
       forCollection: this.$route.params.collection,
-      mappings: ['Mapper', 'RMLMapper', 'RML', 'YARRRML'],
-      endpointData: ''
+      mappings: ['RMLMapper', 'RML', 'YARRRML'],
+      endpointData: '',
+      endpointCards: [],
+      endpoints: [],
+      loc: {},
+      urls: []
     }
   },
   computed: {
@@ -196,12 +162,9 @@ export default {
         forCollection: this.forCollection,
         rml: this.rml,
         yarrrml: this.yarrrml,
-        lat: this.lat,
-        recordId: this.recordId,
-        lon: this.lon
-      }
-      if (this.basePath !== '') {
-        data.dataPath = this.basePath
+        loc: this.loc,
+        endpoints: this.endpoints,
+        urls: this.urls
       }
       return data
     },
@@ -232,19 +195,47 @@ export default {
     reset () {
       this.$refs.form.reset()
     },
-    validate () {
-      if (this.$refs.form.validate()) {
-        this.loadingData = true
-        fetch(`${process.env.baseUrl}/api/proxy/${btoa(this.url)}`)
-          .then(data => data.json())
-          .then((json) => {
-            this.update(json)
-            this.setData(json)
-            this.loadingData = false
-            this.validated = true
-          })
-          .catch(err => console.error(err))
+    updateEndpointCards (endpointCards) {
+      if (endpointCards.length > 1) {
+        this.mappings = ['RML', 'YARRRML']
+      } else {
+        this.mappings = ['RMLMapper', 'RML', 'YARRRML']
       }
+      this.endpointCards = endpointCards
+      this.endpoints = endpointCards.map((card) => {
+        return {
+          name: card.name,
+          url: card.url,
+          basePath: card.basePath,
+          recordId: card.recordId
+        }
+      })
+      this.urls = []
+      endpointCards.forEach((card) => {
+        this.urls.push(card.url)
+        if (card.lat && card.lon) {
+          this.loc = {
+            lat: card.lat,
+            lon: card.lon,
+            url: card.url
+          }
+        }
+      })
+    },
+    validate () {
+      // if (this.$refs.form.validate()) {
+      //   this.loadingData = true
+      //   fetch(`${process.env.baseUrl}/api/proxy/${btoa(this.url)}`)
+      //     .then(data => data.json())
+      //     .then((json) => {
+      //       this.update(json)
+      //       this.setData(json)
+      //       this.loadingData = false
+      //       this.validated = true
+      //     })
+      //     .catch(err => console.error(err))
+      // }
+      this.validated = true
     },
     addHeader () {
       this.customHeaders += 1
