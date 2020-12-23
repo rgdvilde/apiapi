@@ -1,4 +1,5 @@
 const mongoose = require('mongoose')
+const Queries = require('../../queries')
 
 const RecordSchema = new mongoose.Schema({
   id: {
@@ -34,7 +35,7 @@ const RecordSchema = new mongoose.Schema({
 })
 
 const RecordModel = mongoose.model('Record', RecordSchema)
-
+Queries.loadRecord(RecordModel)
 RecordModel.addRecords = (models) => {
   models.forEach(model => model.save())
 }

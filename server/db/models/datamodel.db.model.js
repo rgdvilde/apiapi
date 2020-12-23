@@ -1,6 +1,6 @@
 const mongoose = require('mongoose')
 mongoose.Schema.Types.String.checkRequired(v => v != null)
-
+const Queries = require('../../queries')
 const DataModelSchema = new mongoose.Schema({
   name: {
     type: String,
@@ -51,7 +51,7 @@ const DataModelSchema = new mongoose.Schema({
 })
 
 const DataModelModel = mongoose.model('DataModel', DataModelSchema)
-
+Queries.loadModel(DataModelModel)
 DataModelModel.addDataModel = model => model.save()
 DataModelModel.getAll = () => DataModelModel.find({})
 

@@ -11,6 +11,7 @@ const jp = require('jsonpath')
 const HttpService = require('../../services/http.service')
 const RedisService = require('../../services/redis.service')
 const RecordModel = require('./record.db.model')
+const Queries = require('../../queries')
 
 const rmlmapperPath = './rmlmapper.jar'
 const tempFolderPath = './tmp'
@@ -160,65 +161,6 @@ const notBlank = (obj) => {
   return false
 }
 
-const transformStream = async (obj, collection, lc, gc, meta) => {
-  const { base, '_id': collectionId } = collection
-  const versionedData = obj.map((en) => {
-    if (notBlank(en)) {
-      const { '@id': id } = en
-      en['@id'] = decodeURIComponent(id)
-      const reg = /.+?(?=\\?generatedAtTime=)/
-      const res = reg.exec(decodeURIComponent(id))
-      en['dcterms:isVersionOf'] = res[0]
-    }
-    return en
-  })
-  const globalContext = [
-    base + '/api/context/g/' + collectionId,
-    {
-      'prov': 'http://www.w3.org/ns/prov#',
-      'tree': 'https://w3id.org/tree#',
-      'sh': 'http://www.w3.org/ns/shacl#',
-      'dcterms': 'http://purl.org/dc/terms/',
-      'tree:member': {
-        '@type': '@id'
-      },
-      'memberOf': {
-        '@reverse': 'tree:member',
-        '@type': '@id'
-      },
-      'tree:node': {
-        '@type': '@id'
-      }
-    }]
-  let suf = ''
-  if (meta.xyz) {
-    suf = '/' + meta.xyz[2] + '/' + meta.xyz[0] + '/' + meta.xyz[1]
-  }
-  const nodeId = base + '/api/data/' + collection._id + '?SampledAt=' + collection.lastSampled.toISOString() + '/stream' + suf
-  const nodePartOf = base + '/api/data/' + collection._id + '/stream'
-  const compactedData = await Promise.all(versionedData.map(async (en) => {
-    if (notBlank(en)) {
-      en = await jsonld.compact(en, JSON.parse(lc))
-      en['@context'] = base + '/api/context/l/' + collectionId
-    }
-    return en
-  }))
-  const out = {
-    '@context': globalContext,
-    '@included': compactedData,
-    '@id': nodeId,
-    '@type': 'tree:Node',
-    'dcterms:isPartOf': {
-      '@id': nodePartOf,
-      '@type': 'tree:Collection'
-    }
-  }
-  if (meta['tree:relation']) {
-    out['tree:relation'] = meta['tree:relation']
-  }
-  return out
-}
-
 // const transformStream = (obj, collection, c, meta) => {
 //   const { base } = collection
 //   return new Promise(function (myResolve, myReject) {
@@ -339,13 +281,27 @@ ApiSchema.methods.raw = async function getRawData () {
 }
 
 
-ApiSchema.methods.getStream = async function getApiStream (collection, model, x, y, z, page, unixtime) {
+ApiSchema.methods.getStream = async function getApiStream (collection, model, r) {
+  console.log('Dit zijn de records die gemapped moeten worden')
+  console.log(r)
   const { records, rml, name, header, urls, endpoints } = this
   const { base } = collection
+  let x = null
+  let z = null
+  let y = null
   const xyz = x && y && z
   x = parseInt(x)
   y = parseInt(y)
   z = parseInt(z)
+  const srecords = (records.map(e=>{return '' + e}))
+  const int_records = srecords.filter(value => {return ( r.includes(value))})
+  console.log('deze apistream '  + this.name + ' heeft common records:' + JSON.stringify(int_records))
+  if(int_records.length===0) {
+    const debugms = 'deze endpoint apistream' + this.name +' heeft geen records van die'
+    console.log(debugms)
+    return []
+  }
+
 
   const recordQuery = (skip, limit) => {
     if (!skip) {
@@ -498,7 +454,6 @@ ApiSchema.methods.getStream = async function getApiStream (collection, model, x,
       ])
       .exec()
       .then((result) => {
-      	console.log(result)
       	if (!result[0]) {
       	  return 0
       	} else {
@@ -533,7 +488,6 @@ ApiSchema.methods.getStream = async function getApiStream (collection, model, x,
       ])
       .exec()
       .then((result) => {
-      	console.log(result)
       	if (!result[0]) {
       	  return 0
       	} else {
@@ -561,6 +515,9 @@ ApiSchema.methods.getStream = async function getApiStream (collection, model, x,
       }
     })
   }
+  let page = 0
+  let unixtime = null
+  let limit = null
   if (!page) {
     page = (Math.floor(await resultQuerycount()/PAGESIZE))
   } else {
@@ -587,11 +544,14 @@ ApiSchema.methods.getStream = async function getApiStream (collection, model, x,
     // if (cachedResponse) {
     //   return JSON.parse(cachedResponse)
     // }
-  const query = (x && y && z) ? recordQueryXYZ(x, y, z, page * PAGESIZE, (page + 1) * PAGESIZE) : recordQuery(page * PAGESIZE, (page + 1) * PAGESIZE)
+  const query = Queries.q_getApiRecords(this._id,int_records.map(reco => {return mongoose.Types.ObjectId(reco)}))
   return query.then((result) => {
     // "tags" is now filtered by condition and "joined"
+    console.log(this.name + ' heeft ' + result[0].records.length + ' results')
     let erecords = []
+    if (result.length === 0) {return []}
     if (result[0]) {
+      console.log(result)
       erecords = result[0].records
     }
     const { localContext, globalContext, latPath: shaclLatPath, lonPath: shaclLonPath } = model
@@ -614,7 +574,12 @@ ApiSchema.methods.getStream = async function getApiStream (collection, model, x,
       const pcontent = contents
       Object.keys(pcontent).forEach(key => {
         const c = JSON.parse(pcontent[key]['content'])
-        c.fields.station_id = id
+        const idpath = pcontent[key]['idPath']
+
+        jp.value(c, idpath,id)
+        console.log('dit is het id path na mapping')
+        console.log(jp.query(c, idpath))
+        // c.fields.station_id = id
         pcontent[key]['content'] = JSON.stringify(c)
       })
       // pcontent.forEach(entr => {
@@ -651,6 +616,8 @@ ApiSchema.methods.getStream = async function getApiStream (collection, model, x,
         })
       })
     })
+    console.log('de sourcedict van ' + this.name + ' ziet er zo uit')
+    console.log(JSON.stringify(sourceDict))
     const promiseWrapper = (promise, name) => {
       return promise.then((result) => {
         return {
@@ -664,7 +631,7 @@ ApiSchema.methods.getStream = async function getApiStream (collection, model, x,
     const nextPageURI = NodeIdBase + '/' + (page + 1) + '/stream' + (xyz ? '/' + z + '/' + x + '/' + y : '')
     const previousPageURI = NodeIdBase + ((page - 1) === 0 ? '' : '/' + (page - 1)) + '/stream' + (xyz ? '/' + z + '/' + x + '/' + y : '')
     const traverseNodeIdBase = base + '/api/data/' + collection._id + '/stream/'
-    const metaPromiseQueue = []
+    let metaPromiseQueue = []
     const pagePromise = new Promise((resolve, reject) => {
       const calcPageCount = (page, size, total) => {
         const before = page * size
@@ -688,94 +655,20 @@ ApiSchema.methods.getStream = async function getApiStream (collection, model, x,
       metaPromiseQueue.push(promiseWrapper(resultQueryXYZcount(x, y - 1, z), 'greaterLat'))
     }
     metaPromiseQueue.push(promiseWrapper(pagePromise, 'Page'))
+    metaPromiseQueue = []
     return Promise.all(metaPromiseQueue).then((result) => {
-      resultMap = {}
-      result.forEach((entry) => {
-        resultMap[entry.name] = entry.result
-      })
-      let meta = {}
-      if (resultMap.Page[0] > 0) {
-        meta = {
-          ...meta,
-          'tree:relation': [
-            ...(meta['tree:relation'] ? meta['tree:relation'] : []),
-            {
-              '@type': 'tree:LessThanOrEqualRelation',
-              'tree:node': previousPageURI,
-              'sh:path': {
-                '@list': ['prov:generatedAtTime']
-              },
-              'tree:value': new Date(timeMM[0]).toISOString(),
-              'tree:remainingItems': resultMap.Page[0]
-            }
-          ]
-        }
-      }
-      if (resultMap.Page[1] > 0) {
-        meta = {
-          ...meta,
-          'tree:relation': [
-            ...(meta['tree:relation'] ? meta['tree:relation'] : []),
-            {
-              '@type': 'tree:GreaterThanOrEqualThanRelation',
-              'tree:node': nextPageURI,
-              'sh:path': {
-                '@list': ['prov:generatedAtTime']
-              },
-              'tree:value': new Date(timeMM[1]).toISOString(),
-              'tree:remainingItems': resultMap.Page[1]
-            }
-          ]
-        }
-      }
-      if (xyz) {
-        const parsedShaclLonPath = {
-          '@list': shaclLonPath
-        }
-        const parsedShaclLatPath = {
-          '@list': shaclLatPath
-        }
-        meta = {
-          ...meta,
-          'xyz': [x, y, z],
-          'tree:relation': [
-            ...(meta['tree:relation'] ? meta['tree:relation'] : []),
-            {
-              '@type': 'tree:LessThanRelation',
-              'tree:node': traverseNodeIdBase + z + '/' + (x - 1) + '/' + y,
-              'sh:path': parsedShaclLonPath,
-              'tree:value': cordinates['00'][0],
-              'tree:remainingItems': resultMap.lessLon
-            },
-            {
-              '@type': 'tree:GreaterThanRelation',
-              'tree:node': traverseNodeIdBase + z + '/' + (x + 1) + '/' + y,
-              'sh:path': parsedShaclLonPath,
-              'tree:value': cordinates['10'][0],
-              'tree:remainingItems': resultMap.greaterLon
-            },
-            {
-              '@type': 'tree:LessThanRelation',
-              'tree:node': traverseNodeIdBase + z + '/' + x + '/' + (y + 1),
-              'sh:path': parsedShaclLatPath,
-              'tree:value': cordinates['00'][1],
-              'tree:remainingItems': resultMap.lessLat
-            },
-            {
-              '@type': 'tree:GreaterThanRelation',
-              'tree:node': traverseNodeIdBase + z + '/' + x + '/' + (y - 1),
-              'sh:path': parsedShaclLatPath,
-              'tree:value': cordinates['01'][1],
-              'tree:remainingItems': resultMap.greaterLat
-            }
-          ]
-        }
-      }
+      // console.log('mapping van ' + this.name + ' ziet er zo uit')
+      // console.log(this.rml)
+    console.log('de sourcedict van ' + this.name + ' ziet er zo uit')
+    console.log(JSON.stringify(sourceDict))
       return mapRMLsplit(sourceDict, rml, rmlmapperPath, tempFolderPath, name, urls).then((out) => {
         const outconcat = [].concat.apply([], out)
+        console.log('na mapping ziet de data van ' + this.name + 'er zo uit')
+        console.log(outconcat)
         if (EXPAND) {
+          return expandDepth(outconcat)
           return transformStream(expandDepth(outconcat), collection, localContext, globalContext, meta).then((res) => {
-          	RedisService.setData(cacheName, JSON.stringify(res))
+          	// RedisService.setData(cacheName, JSON.stringify(res))
             return res
           })
         } else {
@@ -816,6 +709,8 @@ const mapRMLsplit = (sourceDict, rml, rmlmapperPath, tempFolderPath, name, urls)
     sources[key2] = JSON.stringify(sources[key2])
   })
     tempFolderPath = tempFolderPath + '/' + hash(key)
+    console.log('deze data wordt gemapped bij ' + name)
+    console.log(sources)
     return mapRML(sources, rml, rmlmapperPath, tempFolderPath, name).then((out) => {
       relabelBlankNodes(out, key)
       return out
@@ -877,7 +772,11 @@ ApiSchema.methods.invokeStream = function invokeApiStream (model) {
             header: JSON.stringify(strippedData),
             content: JSON.stringify(record),
             hash: recordHash,
+            idPath: idpath
           }
+          console.log('dit zijn de chagned objects of ' + this.name)
+          console.log(changedObjects[newid]['contents'])
+          console.log(JSON.stringify(changedObjects))
           if (url === loc.url){
             const latpath = loc.lat
             const lonpath = loc.lon
@@ -1054,6 +953,7 @@ ApiSchema.methods.invoke = function invokeApi (model) {
 }
 
 const ApiModel = mongoose.model('Api', ApiSchema)
+Queries.loadApi(ApiModel)
 ApiModel.getAll = () => ApiModel.find({})
 ApiModel.addApi = api => api.save()
 

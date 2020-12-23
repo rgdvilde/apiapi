@@ -45,6 +45,7 @@ module.exports = {
       .then((response) => {
         const { model } = response
         const { localContext } = model
+        console.log(model)
         res.json(JSON.parse(localContext))
       })
       .catch(err => next(err))
