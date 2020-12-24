@@ -45,6 +45,7 @@
     "solid-auth-client": "^2.5.2",
     "swagger-ui-express": "^4.1.4",
     "vue-json-component": "^0.3.2",
+    "vue-json-editor": "^1.4.3",
     "vue-json-pretty": "^1.7.1",
     "vuex": "latest"
   },

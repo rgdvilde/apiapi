@@ -58,7 +58,7 @@ module.exports = {
       axios.get(url)
         .then((response) => {
           const sources = {
-            'data.json': JSON.stringify(response.data)
+            'data1.json': JSON.stringify(response.data)
           }
           return wrapper.execute(rml, { sources, generateMetadata: false, serialization: 'jsonld' }).then((resp) => {
             const validator = new SHACLValidator()

@@ -86,12 +86,6 @@
             <v-tab-item
               :key="'data'">
               <pre v-text="dataText" />
-              <v-btn
-                @click="complete"
-                color="success lighten-1"
-                class="mr-4">
-                {{ $t('actions.submitRML') }}
-              </v-btn>
             </v-tab-item>
           </v-tabs-items>
         </v-col>
@@ -159,6 +153,7 @@ export default {
     onUpdate (graph) {
       const serializer = $rdf.Serializer(graph)
       this.dataText = serializer.statementsToN3(graph.statements)
+      this.$emit('complete', this.dataText)
     },
     onLoad (shapes) {
       this.targetShapes = shapes

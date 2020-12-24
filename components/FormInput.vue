@@ -89,10 +89,7 @@ export default {
       }
     },
     value: {
-      type: Object,
-      default () {
-        return {}
-      }
+      type: Array
     },
     expansion: {
       type: Object,

@@ -5,13 +5,12 @@ const jsonld = require('jsonld')
 const jp = require('jsonpath')
 const { flattenDepth } = require('lodash')
 const RedisService = require('../../services/redis.service')
+const Queries = require('../../queries')
 const DataModelModel = require('./datamodel.db.model')
 const ApiModel = require('./api.db.model')
 const RecordModel = require('./record.db.model')
 const UploadModel = require('./upload.model')
 const fs = require('fs')
-const Queries = require('../../queries')
-
 
 const CollectionSchema = mongoose.Schema({
   name: {
@@ -64,7 +63,7 @@ CollectionSchema.methods.invokeApis = function invokeCollectionApis () {
 }
 
 CollectionSchema.methods.getApiStreams = async function getCollectionApiStreams (x, y, z, page, unixtime) {
-  let records = []
+  const records = []
   let pageUrl = ''
   let cached = false
   let cacheRes = {}
@@ -75,36 +74,32 @@ CollectionSchema.methods.getApiStreams = async function getCollectionApiStreams 
         '_id': { $in: this.apis }
       })
         .exec()
-        .then(async(apiss) => {
-          console.log(x,y,z)
-          if(x) {x = parseInt(x)}
-          if(y) {y = parseInt(y)}
-          if(z) {z = parseInt(z)}
+        .then(async (apiss) => {
+          console.log(x, y, z)
+          if (x) { x = parseInt(x) }
+          if (y) { y = parseInt(y) }
+          if (z) { z = parseInt(z) }
 
-          const xyz = x&&y&&z
-          const totalRecords= await Queries.q_getRecordCount(this._id,x,y,z) 
-          const maxPage = parseInt(Math.ceil(totalRecords/PAGESIZE)) - 1 > 0 ? parseInt(Math.ceil(totalRecords/PAGESIZE)) - 1 : 0
-          if(!page){
+          const xyz = x && y && z
+          const totalRecords = await Queries.q_getRecordCount(this._id, x, y, z)
+          const maxPage = parseInt(Math.ceil(totalRecords / PAGESIZE)) - 1 > 0 ? parseInt(Math.ceil(totalRecords / PAGESIZE)) - 1 : 0
+          if (!page) {
             page = maxPage
-          }
-          else if (parseInt(page) > maxPage)
-          {
+          } else if (parseInt(page) > maxPage) {
             return []
-          }
-          else {
+          } else {
             page = parseInt(page)
           }
-          if(unixtime && xyz){
-            page = (Math.floor(await Queries.olderRecordsXYZ(this._id,parseInt(unixtime),x,y,z)/PAGESIZE))
+          if (unixtime && xyz) {
+            page = (Math.floor(await Queries.olderRecordsXYZ(this._id, parseInt(unixtime), x, y, z) / PAGESIZE))
+          } else if (unixtime) {
+            page = (Math.floor(await Queries.olderRecords(this._id, parseInt(unixtime)) / PAGESIZE))
           }
-          else if(unixtime){
-            page = (Math.floor(await Queries.olderRecords(this._id,parseInt(unixtime))/PAGESIZE))
-          }
-          pageUrl = this.base + '/api/data/' + this._id + '/' + page +'/stream' + (xyz?'/'+z+'/'+x+'/'+y:'')
+          pageUrl = this.base + '/api/data/' + this._id + '/' + page + '/stream' + (xyz ? '/' + z + '/' + x + '/' + y : '')
 
-          if(page<maxPage){
+          if (page < maxPage) {
             const cachedResponse = await RedisService.getData(pageUrl)
-            if(cachedResponse) {
+            if (cachedResponse) {
               console.log('this is the cached data')
               console.log(cachedResponse)
               cached = true
@@ -113,14 +108,14 @@ CollectionSchema.methods.getApiStreams = async function getCollectionApiStreams 
             }
           }
           console.log('the page number is:' + page)
-          return Queries.q_getFragmentIds(this._id,page*PAGESIZE,(page+1)*PAGESIZE,x,y,z).then(result => {
+          return Queries.q_getFragmentIds(this._id, page * PAGESIZE, (page + 1) * PAGESIZE, x, y, z).then((result) => {
             records.push(result)
-            result = result.map(r => {return ''+r._id})
+            result = result.map((r) => { return '' + r._id })
             return Promise.all(apiss.map((api) => {
               return ApiModel.findById(api._id)
                 .exec()
                 .then((papi) => {
-                  return papi.getStream(this, model, result).then(resss=>{
+                  return papi.getStream(this, model, result).then((resss) => {
                     console.log('dit is result van ret')
                     console.log(resss)
                     return resss
@@ -128,7 +123,7 @@ CollectionSchema.methods.getApiStreams = async function getCollectionApiStreams 
                 })
             }))
           })
-          .catch(err => {console.log(err)})
+            .catch((err) => { console.log(err) })
         })
       const uploadsPromise = UploadModel.find({
         '_id': { $in: this.uploads }
@@ -138,33 +133,32 @@ CollectionSchema.methods.getApiStreams = async function getCollectionApiStreams 
           return Promise.all(uploads.map(up => up.invoke()))
         })
       return Promise.all([apiPromise, uploadsPromise])
-    }).then(results => {
-              console.log('dit is results')
-        console.log(results)
-        if(cached){return cacheRes}
+    }).then((results) => {
+      console.log('dit is results')
+      console.log(results)
+      if (cached) { return cacheRes }
 
       return DataModelModel.findById(this.model)
-      .exec()
-      .then((model) => {
-        const allData = flattenDepth(results, 2)
-        return constructMeta(this,model,records,page,x,y,z).then(meta => {
-          console.log('dit zijn de ids van alle data')
-          console.log(allData)
-          allData.forEach(dat => {console.log(dat['@id'])})
-          console.log('contexts')
-          console.log(model)
-          console.log(model.localContext)
-          console.log(model.globalContext)
-          return transformStream(allData, this, model.localContext, model.globalContext, meta,page).then(transformedStream => {
-            console.log('dit wordt gesaved naar redis')
-            console.log(JSON.stringify(transformedStream))
-            console.log(pageUrl)
-            RedisService.setData(pageUrl,JSON.stringify(transformedStream))
-            return transformedStream
+        .exec()
+        .then((model) => {
+          const allData = flattenDepth(results, 2)
+          return constructMeta(this, model, records, page, x, y, z).then((meta) => {
+            console.log('dit zijn de ids van alle data')
+            console.log(allData)
+            allData.forEach((dat) => { console.log(dat['@id']) })
+            console.log('contexts')
+            console.log(model)
+            console.log(model.localContext)
+            console.log(model.globalContext)
+            return transformStream(allData, this, model.localContext, model.globalContext, meta, page).then((transformedStream) => {
+              console.log('dit wordt gesaved naar redis')
+              console.log(JSON.stringify(transformedStream))
+              console.log(pageUrl)
+              RedisService.setData(pageUrl, JSON.stringify(transformedStream))
+              return transformedStream
+            })
           })
-
         })
-      })
     })
 }
 
@@ -187,18 +181,18 @@ const calculateSquare = (x, y, z) => {
   }
 }
 
-const constructMeta = (collection,model,data,page, x,y,z) => {
-  const {latPath: shaclLatPath, lonPath: shaclLonPath} = model
+const constructMeta = (collection, model, data, page, x, y, z) => {
+  const { latPath: shaclLatPath, lonPath: shaclLonPath } = model
   console.log('data')
   console.log(data)
-  if (data.length < 1){
-    return new Promise((res,rej)=>{res({})})
+  if (data.length < 1) {
+    return new Promise((res, rej) => { res({}) })
   }
-  const {_id:collectionId, base} = collection
-  const xyz = x&&y&&z
+  const { _id: collectionId, base } = collection
+  const xyz = x && y && z
   const NodeIdBase = base + '/api/data/' + collectionId
   const nextPageURI = NodeIdBase + '/' + (page + 1) + '/stream' + (xyz ? '/' + z + '/' + x + '/' + y : '')
-  const previousPageURI = NodeIdBase +  '/' + (page - 1) + '/stream' + (xyz ? '/' + z + '/' + x + '/' + y : '')
+  const previousPageURI = NodeIdBase + '/' + (page - 1) + '/stream' + (xyz ? '/' + z + '/' + x + '/' + y : '')
   const traverseNodeIdBase = base + '/api/data/' + collectionId + '/stream/'
   const metaPromiseQueue = []
 
@@ -227,7 +221,7 @@ const constructMeta = (collection,model,data,page, x,y,z) => {
     if (batch > timeMM[1]) {
       timeMM[1] = batch
     }
-    })  
+  })
   console.log('dit is de time dict')
   console.log(timeMM)
   const pagePromise = new Promise((resolve, reject) => {
@@ -237,7 +231,7 @@ const constructMeta = (collection,model,data,page, x,y,z) => {
       return [before, after]
     }
     if (xyz) {
-      Queries.q_getRecordCount(collectionId,x, y, z).then((result) => {
+      Queries.q_getRecordCount(collectionId, x, y, z).then((result) => {
         resolve(calcPageCount(page, PAGESIZE, result))
       })
     } else {
@@ -251,12 +245,12 @@ const constructMeta = (collection,model,data,page, x,y,z) => {
   console.log(x)
   console.log(y)
   console.log(z)
-  console.log(x&&y&&z)
+  console.log(x && y && z)
   if (xyz) {
-    metaPromiseQueue.push(promiseWrapper(Queries.q_getRecordCount(collectionId,x - 1, y, z), 'lessLon'))
-    metaPromiseQueue.push(promiseWrapper(Queries.q_getRecordCount(collectionId,x + 1, y, z), 'greaterLon'))
-    metaPromiseQueue.push(promiseWrapper(Queries.q_getRecordCount(collectionId,x, y + 1, z), 'lessLat'))
-    metaPromiseQueue.push(promiseWrapper(Queries.q_getRecordCount(collectionId,x, y - 1, z), 'greaterLat'))
+    metaPromiseQueue.push(promiseWrapper(Queries.q_getRecordCount(collectionId, x - 1, y, z), 'lessLon'))
+    metaPromiseQueue.push(promiseWrapper(Queries.q_getRecordCount(collectionId, x + 1, y, z), 'greaterLon'))
+    metaPromiseQueue.push(promiseWrapper(Queries.q_getRecordCount(collectionId, x, y + 1, z), 'lessLat'))
+    metaPromiseQueue.push(promiseWrapper(Queries.q_getRecordCount(collectionId, x, y - 1, z), 'greaterLat'))
   }
   metaPromiseQueue.push(promiseWrapper(pagePromise, 'Page'))
   return Promise.all(metaPromiseQueue).then((result) => {
@@ -307,7 +301,7 @@ const constructMeta = (collection,model,data,page, x,y,z) => {
         '@list': shaclLatPath
       }
 
-      const cordinates = calculateSquare(x,y,z)
+      const cordinates = calculateSquare(x, y, z)
 
       meta = {
         ...meta,
@@ -347,7 +341,6 @@ const constructMeta = (collection,model,data,page, x,y,z) => {
     }
     return meta
   })
-  
 }
 
 const notBlank = (obj) => {
@@ -360,7 +353,7 @@ const notBlank = (obj) => {
   return false
 }
 
-const transformStream = async (obj, collection, lc, gc, meta,page) => {
+const transformStream = async (obj, collection, lc, gc, meta, page) => {
   const { base, '_id': collectionId } = collection
   console.log('dit is de data die binnekomt bij de transform stream')
   console.log(obj)
@@ -375,8 +368,7 @@ const transformStream = async (obj, collection, lc, gc, meta,page) => {
       if (!res || res.length < 1) {
         console.log('dit is de invalid res')
         console.log(id)
-      }
-      else {
+      } else {
         en['dcterms:isVersionOf'] = res[0]
       }
     }
@@ -404,7 +396,7 @@ const transformStream = async (obj, collection, lc, gc, meta,page) => {
   if (meta.xyz) {
     suf = '/' + meta.xyz[2] + '/' + meta.xyz[0] + '/' + meta.xyz[1]
   }
-  const nodeId = base + '/api/data/' + collection._id + '/'+page + '/stream' + suf
+  const nodeId = base + '/api/data/' + collection._id + '/' + page + '/stream' + suf
   const nodePartOf = base + '/api/data/' + collection._id + '/stream'
   const compactedData = await Promise.all(versionedData.map(async (en) => {
     if (notBlank(en)) {

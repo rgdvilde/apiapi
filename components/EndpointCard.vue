@@ -2,13 +2,28 @@
   <div>
     <v-btn
       @click="t_eventStream"
-      v-bind:color="b_eventStream ? 'green' : 'red'">
-      Event Stream
+      outlined>
+      <v-icon v-if="!b_eventStream">
+        mdi-view-stream-outline
+      </v-icon><v-icon v-if="b_eventStream">
+        mdi-view-stream
+      </v-icon>Event Stream
+    </v-btn>
+    <v-btn
+      v-if="!b_eventStream"
+      disabled>
+      <v-icon>mdi-map-marker-off</v-icon>Location
     </v-btn>
     <v-btn
       v-if="b_eventStream"
-      v-bind:color="b_location ? 'green' : 'red'"
-      @click="t_location">
+      @click="t_location"
+      outlined>
+      <v-icon v-if="!b_location">
+        mdi-map-marker-off
+      </v-icon>
+      <v-icon v-if="b_location">
+        mdi-map-marker
+      </v-icon>
       Location
     </v-btn>
     <v-text-field

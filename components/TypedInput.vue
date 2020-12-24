@@ -26,21 +26,18 @@ export default {
       }
     },
     value: {
-      type: Object,
-      default () {
-        return {}
-      }
+      type: String
     },
     isValid: {
-      type: Object,
+      type: Boolean,
       default () {
-        return {}
+        return false
       }
     },
     constant: {
-      type: Object,
+      type: Boolean,
       default () {
-        return {}
+        return false
       }
     }
   },

@@ -1,15 +1,16 @@
 <template>
   <div>
-    <v-btn
-      @click="addEndpoint">
-      Add
-    </v-btn>
     <v-tabs v-model="tab">
       <v-tab
         v-for="(name) in cards"
         :key="name.name">
         {{ name.name }}
       </v-tab>
+      <v-btn
+        @click="addEndpoint"
+        icon>
+        <v-icon>mdi-plus</v-icon>
+      </v-btn>
     </v-tabs>
     <v-tabs-items v-model="tab">
       <v-tab-item
@@ -63,6 +64,9 @@ export default {
       const { tab, endpoints } = this
       endpoints[tab] = endpoint
       this.$emit('update', this.endpoints)
+    },
+    validateEndpoints () {
+      this.$emit('validated', true)
     }
 
   }

@@ -1,102 +1,240 @@
 <template>
   <v-container fluid>
-    <v-row>
-      <v-col lg="6">
-        <v-card>
-          <v-form
-            ref="form"
-            v-model="valid">
-            <v-card-text>
-              <v-text-field
-                v-model="name"
-                :rules="nameRules"
-                :label="$t('formLabels.name')"
-                required />
+    <v-expansion-panels>
+      <v-expansion-panel>
+        <v-expansion-panel-header>
+          <div>
+            <v-icon>mdi-text-box-outline</v-icon>
+            Basic Information
+            <v-dialog
+              v-model="d_basicInfo"
+              width="500">
+              <template v-slot:activator="{ on, attrs }">
+                <v-btn
+                  v-bind="attrs"
+                  v-on="on"
+                  icon>
+                  <v-icon>mdi-information</v-icon>
+                </v-btn>
+              </template>
 
-              <endpoint-cards
-                @update="updateEndpointCards" />
-              <v-card-actions>
+              <v-card>
+                <v-card-title class="headline grey lighten-2">
+                  Basic Information
+                </v-card-title>
+
+                <v-card-text>
+                  Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+                </v-card-text>
+
+                <v-divider />
+              </v-card>
+            </v-dialog>
+          </div>
+        </v-expansion-panel-header>
+        <v-expansion-panel-content>
+          <v-row>
+            <v-text-field
+              :label="$t('formLabels.name')"
+              v-model="name" />
+          </v-row>
+        </v-expansion-panel-content>
+      </v-expansion-panel>
+      <v-expansion-panel>
+        <v-expansion-panel-header>
+          <div>
+            <v-icon>mdi-text-box-outline</v-icon>
+            Endpoints
+            <v-dialog
+              v-model="d_endpointInfo"
+              width="500">
+              <template v-slot:activator="{ on, attrs }">
                 <v-btn
-                  :disabled="!valid"
-                  @click="validate"
-                  color="primary"
-                  class="mr-4">
-                  {{ $t('actions.validate') }}
+                  v-bind="attrs"
+                  v-on="on"
+                  icon>
+                  <v-icon>mdi-information</v-icon>
                 </v-btn>
+              </template>
+
+              <v-card>
+                <v-card-title class="headline grey lighten-2">
+                  Endpoints
+                </v-card-title>
+
+                <v-card-text>
+                  Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+                </v-card-text>
+
+                <v-divider />
+              </v-card>
+            </v-dialog>
+            <v-btn
+              @click="validate(true)"
+              v-if="!validated"
+              v-on:click.stop
+              icon>
+              <v-icon>mdi-check-circle-outline</v-icon>
+            </v-btn>
+            <v-icon v-if="validated">
+              mdi-check-circle
+            </v-icon>
+          </div>
+        </v-expansion-panel-header>
+        <v-expansion-panel-content>
+          <endpoint-cards
+            @update="updateEndpointCards"
+            @validated="validate" />
+        </v-expansion-panel-content>
+      </v-expansion-panel>
+      <v-expansion-panel :disabled="!next_step">
+        <v-expansion-panel-header>
+          <div>
+            <v-icon>mdi-text-box-outline</v-icon>
+            Mapping
+            <v-dialog
+              v-model="d_mappingInfo"
+              width="500">
+              <template v-slot:activator="{ on, attrs }">
+                <span>
+                  <v-btn
+                    v-bind="attrs"
+                    v-on="on"
+                    icon>
+                    <v-icon>mdi-information</v-icon>
+                  </v-btn>
+                </span>
+              </template>
+
+              <v-card>
+                <v-card-title class="headline grey lighten-2">
+                  Mapping
+                </v-card-title>
+
+                <v-card-text>
+                  Information about mapping
+                </v-card-text>
+
+                <v-divider />
+              </v-card>
+            </v-dialog>
+            <v-dialog
+              v-model="d_mappingSelect"
+              width="800">
+              <template v-slot:activator="{ on, attrs }">
                 <v-btn
-                  @click="reset"
-                  text
-                  class="mr-4">
-                  {{ $t('actions.reset') }}
+                  v-bind="attrs"
+                  v-on="on"
+                  icon>
+                  <v-icon>mdi-map-outline</v-icon>
                 </v-btn>
-                <v-progress-circular
-                  v-if="loadingData"
-                  indeterminate
-                  color="primary" />
-              </v-card-actions>
-            </v-card-text>
-          </v-form>
-        </v-card>
-      </v-col>
-    </v-row>
-    <!--     <v-container
-      v-if="validated"
-      fluid>
-      <v-switch
-        v-model="basePathSelectorVisible"
-        :label="$t('formLabels.setBasePath')" />
-      <v-text-field
-        v-if="basePathSelectorVisible"
-        @change="setBasePath" />
-    </v-container> -->
-    <v-container
-      v-if="validated"
-      fluid>
-      <v-select
-        :items="mappings"
-        @change="selectMapper"
-        label="Standard" />
-    </v-container>
-    <rml-editor
-      v-if="mapMode === 'RML'"
-      @complete="rmlCompleted" />
-    <shacl-mapper-wrapper v-if="mapMode === 'RMLMapper'"
-                          :model="collection.model"
-                          :endpointData="endpointData"
-                          @complete="rmlCompleted" />
-    <yarrrml-editor
-      v-if="mapMode === 'YARRRML'"
-      @complete="yarrrmlCompleted" />
-    <device-stepper
-      v-if="mapMode === 'Mapper'"
-      :model="collection.model"
-      @complete="pathsCompleted" />
-    <constraints-validator
-      v-if="mapMode === 'RML' || mapMode === 'YARRRML' || mapMode === 'RMLMapper'"
-      :output="mapValidation" />
-    <confirm-creation-dialog
-      ref="confirmDialog"
-      v-if="dialogVisible"
-      :apiData="apiData"
-      @submitted="submitted">
-      <template v-slot:btn>
-        <v-btn
-          @click="$refs.confirmDialog.toggle()"
-          v-t="'actions.confirm'"
-          class="mt-5" />
-      </template>
-    </confirm-creation-dialog>
+              </template>
+
+              <v-card>
+                <v-card-title class="headline grey lighten-2">
+                  Mapping
+                </v-card-title>
+
+                <v-card-text>
+                  <v-row>
+                    <v-col>
+                      <v-card @click="setMapMode('RML')">
+                        <v-img
+                          lazy-src="https://via.placeholder.com/150x150"
+                          max-height="150"
+                          max-width="150"
+                          src="https://via.placeholder.com/150x150" />
+                      </v-card>
+                    </v-col>
+                    <v-col>
+                      <v-card @click="setMapMode('YARRRML')">
+                        <v-img
+                          lazy-src="https://picsum.photos/id/11/10/6"
+                          max-height="150"
+                          max-width="150"
+                          src="https://via.placeholder.com/150x150" />
+                      </v-card>
+                    </v-col>
+                    <v-col>
+                      <v-card @click="setMapMode('RMLMapper')">
+                        <v-img
+                          lazy-src="https://via.placeholder.com/150x150"
+                          max-height="150"
+                          max-width="150"
+                          src="https://via.placeholder.com/150x150" />
+                      </v-card>
+                    </v-col>
+                  </v-row>
+                </v-card-text>
+              </v-card>
+            </v-dialog>
+            <v-btn
+              @click="checkConstraints()"
+              v-if="!constraintsValidated"
+              v-on:click.stop
+              icon>
+              <v-icon>mdi-check-circle-outline</v-icon>
+            </v-btn>
+            <v-icon v-if="constraintsValidated">
+              mdi-check-circle
+            </v-icon>
+            <v-dialog
+              v-if="!constraintsValidated && mapValidation != ''"
+              v-model="d_mapValidation"
+              width="800">
+              <template v-slot:activator="{ on, attrs }">
+                <v-btn
+                  v-bind="attrs"
+                  v-on="on"
+                  icon>
+                  <v-icon>mdi-alert-circle-check</v-icon>
+                </v-btn>
+              </template>
+
+              <v-card>
+                <v-card-title class="headline grey lighten-2">
+                  Mapping
+                </v-card-title>
+
+                <v-card-text>
+                  <validation-report :validationReport="mapValidation" />
+                </v-card-text>
+              </v-card>
+            </v-dialog>
+          </div>
+        </v-expansion-panel-header>
+        <v-expansion-panel-content>
+          <rml-editor
+            v-if="mapMode === 'RML'"
+            @complete="setRML" />
+          <shacl-mapper-wrapper v-if="mapMode === 'RMLMapper'"
+                                :model="collection.model"
+                                :endpointData="endpointData"
+                                @complete="setRML"
+                                :style="btnStyles" />
+          <yarrrml-editor
+            v-if="mapMode === 'YARRRML'"
+            @complete="setYARRRML" />
+        </v-expansion-panel-content>
+      </v-expansion-panel>
+    </v-expansion-panels>
+    <v-btn
+      :disabled="!validated || !constraintsValidated"
+      @click="submitted(true)"
+      color="primary"
+      class="mr-4">
+      Submit
+    </v-btn>
   </v-container>
 </template>
 <script>
 import { mapGetters, mapActions, mapMutations } from 'vuex'
 import { get as getProp } from 'lodash'
-import ConfirmCreationDialog from '~/components/ConfirmCreationDialog.vue'
-import ConstraintsValidator from '~/components/ConstraintsValidator.vue'
-import DeviceStepper from '~/components/DeviceStepper.vue'
+import axios from 'axios'
 import RmlEditor from '~/components/RmlEditor.vue'
 import YarrrmlEditor from '~/components/YarrrmlEditor.vue'
 import ShaclMapperWrapper from '~/components/ShaclMapperWrapper.vue'
+import ValidationReport from '~/components/ValidationReport.vue'
 import EndpointCards from '~/components/EndpointCards.vue'
 import { mutationTypes, actionTypes, getterTypes as apiGetters } from '~/store/api'
 import { getterTypes as collectionGetters, actionTypes as collectionActions } from '~/store/collections'
@@ -105,13 +243,11 @@ import page from '~/mixins/page'
 export default {
   name: 'ApiCreate',
   components: {
-    DeviceStepper,
-    ConfirmCreationDialog,
     RmlEditor,
     YarrrmlEditor,
-    ConstraintsValidator,
     ShaclMapperWrapper,
-    EndpointCards
+    EndpointCards,
+    ValidationReport
   },
   mixins: [page],
   head () {
@@ -125,7 +261,6 @@ export default {
       nameRules: [v => !!v || 'Name is required'],
       name: 'Donkey Republic bike sharing',
       urlRules: [v => !!v || 'Url is required'],
-      url: 'https://data.stad.gent/api/records/1.0/search/?dataset=donkey-republic-deelfietsen-stations-locaties&q=',
       authMethodItems: [
         { text: 'Open', value: 'open' },
         { value: 'api_key', text: 'Api key' },
@@ -149,14 +284,19 @@ export default {
       endpointCards: [],
       endpoints: [],
       loc: {},
-      urls: []
+      urls: [],
+      d_basicInfo: false,
+      d_mappingInfo: false,
+      d_endpointInfo: false,
+      d_mappingSelect: false,
+      constraintsValidated: false,
+      d_mapValidation: false
     }
   },
   computed: {
     apiData () {
       const data = {
         paths: this.devicePaths,
-        url: this.url,
         name: this.name,
         authMethod: this.authMethod,
         forCollection: this.forCollection,
@@ -168,6 +308,20 @@ export default {
       }
       return data
     },
+    url () {
+      if (this.endpoints.length > 0) {
+        return this.endpoints[0].url
+      } else {
+        return ''
+      }
+    },
+    btnStyles () {
+      return {
+        'min-height': '300px',
+        'display': 'grid'
+      }
+    },
+    next_step () { return this.validated },
     ...mapGetters('api', { rawData: apiGetters.SELECTED_API_DATA }),
     ...mapGetters('collections', { collectionById: collectionGetters.COLLECTION_BY_ID }),
     collection () {
@@ -222,7 +376,7 @@ export default {
         }
       })
     },
-    validate () {
+    async validate (valid) {
       // if (this.$refs.form.validate()) {
       //   this.loadingData = true
       //   fetch(`${process.env.baseUrl}/api/proxy/${btoa(this.url)}`)
@@ -235,7 +389,10 @@ export default {
       //     })
       //     .catch(err => console.error(err))
       // }
-      this.validated = true
+      console.log(this.collection.model)
+      const resp = await axios.get(this.url)
+      this.endpointData = resp.data
+      this.validated = valid
     },
     addHeader () {
       this.customHeaders += 1
@@ -253,9 +410,19 @@ export default {
       this.devicePaths = paths
       this.dialogVisible = true
     },
+    checkConstraints () {
+      console.log(this.rml)
+      if (this.mapMode === 'RML' || this.mapMode === 'RMLMapper') {
+        this.rmlCompleted(this.rml)
+      } else if (this.mapMode === 'YARRRML') {
+        this.yarrrmlCompleted(this.yarrrml)
+      }
+    },
     rmlCompleted (rml) {
-      this.rml = rml
+      console.log('validating RML')
+      console.log(this.collection.model.shacl)
       if (this.collection.model.shacl) {
+        console.log(this.url)
         const data = { 'shacl': this.collection.model.shacl, 'rml': this.rml, 'url': this.url, 'mapmode': 'rml' }
         fetch(`${process.env.baseUrl}/api/map/validate`, {
           method: 'POST',
@@ -267,16 +434,19 @@ export default {
         })
           .then(data => data.json())
           .then((json) => {
+            console.log(json)
             if (JSON.stringify(json) === 'true') {
-              this.dialogVisible = true
+              console.log('truee')
+              this.constraintsValidated = true
             } else {
-              this.dialogVisible = false
+              this.constraintsValidated = false
             }
             this.mapValidation = JSON.stringify(json)
+            console.log(this.constraintsValidated)
           })
           .catch(err => console.error(err))
       } else {
-        this.dialogVisible = true
+        this.constraintsValidated = true
       }
     },
     yarrrmlCompleted (yarrrml) {
@@ -294,15 +464,15 @@ export default {
           .then(data => data.json())
           .then((json) => {
             if (JSON.stringify(json) === 'true') {
-              this.dialogVisible = true
+              this.constraintsValidated = true
             } else {
-              this.dialogVisible = false
+              this.constraintsValidated = false
             }
             this.mapValidation = JSON.stringify(json)
           })
           .catch(err => console.error(err))
       } else {
-        this.dialogVisible = true
+        this.constraintsValidated = true
       }
     },
     fragmentationInfoComplete (fragmentationInfo) {
@@ -327,6 +497,12 @@ export default {
         })
       }
     },
+    setRML (rml) {
+      this.rml = rml
+    },
+    setYARRRML (yarrrml) {
+      this.yarrrml = yarrrml
+    },
     setBasePath (path) {
       if (this.basePath !== path) {
         this.basePath = path
@@ -337,6 +513,10 @@ export default {
     },
     setData (json) {
       this.endpointData = json
+    },
+    setMapMode (mode) {
+      this.mapMode = mode
+      this.d_mappingSelect = false
     }
   }
 }

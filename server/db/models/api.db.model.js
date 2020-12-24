@@ -10,8 +10,8 @@ const jsonld = require('jsonld')
 const jp = require('jsonpath')
 const HttpService = require('../../services/http.service')
 const RedisService = require('../../services/redis.service')
-const RecordModel = require('./record.db.model')
 const Queries = require('../../queries')
+const RecordModel = require('./record.db.model')
 
 const rmlmapperPath = './rmlmapper.jar'
 const tempFolderPath = './tmp'
@@ -39,10 +39,6 @@ const ApiSchema = new mongoose.Schema({
     default: 'open'
   },
   urls: [{ type: String }],
-  url: {
-    type: String,
-    required: true
-  },
   paths: [{
     toPath: {
       // ? name of the path key
@@ -93,7 +89,7 @@ const ApiSchema = new mongoose.Schema({
     type: Object,
     default: {}
   },
-  endpoints: [{type: Object}],
+  endpoints: [{ type: Object }],
   records: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Record' }],
   meta: { type: Object, default: {} },
   categories: { type: Array, default: [] },
@@ -211,23 +207,22 @@ ApiSchema.methods.raw = async function getRawData () {
   return data
 }
 
-
 ApiSchema.methods.getStream = async function getApiStream (collection, model, r) {
-  const { records, rml, name, header, urls, endpoints } = this
+  const { records, rml, yarrrml, name, header, urls, endpoints } = this
   const { base } = collection
-
-  const srecords = (records.map(e=>{return '' + e}))
-  const int_records = srecords.filter(value => {return ( r.includes(value))})
-  if(int_records.length===0) {
+  const mappingmethod = (rml && rml != '') ? 'rml' : 'yarrrml'
+  const srecords = (records.map((e) => { return '' + e }))
+  const int_records = srecords.filter((value) => { return (r.includes(value)) })
+  if (int_records.length === 0) {
     return []
   }
 
-  const query = Queries.q_getApiRecords(this._id,int_records.map(reco => {return mongoose.Types.ObjectId(reco)}))
+  const query = Queries.q_getApiRecords(this._id, int_records.map((reco) => { return mongoose.Types.ObjectId(reco) }))
   return query.then((result) => {
     // "tags" is now filtered by condition and "joined"
     // console.log(this.name + ' heeft ' + result[0].records.length + ' results')
     let erecords = []
-    if (result.length === 0) {return []}
+    if (result.length === 0) { return [] }
     if (result[0]) {
       erecords = result[0].records
     }
@@ -236,14 +231,14 @@ ApiSchema.methods.getStream = async function getApiStream (collection, model, r)
     erecords.forEach((r) => {
       const { id, contents, batch } = r
       const pcontent = contents
-      Object.keys(pcontent).forEach(key => {
-        const c = JSON.parse(pcontent[key]['content'])
-        const idpath = pcontent[key]['idPath']
+      Object.keys(pcontent).forEach((key) => {
+        const c = JSON.parse(pcontent[key].content)
+        const idpath = pcontent[key].idPath
 
-        jp.value(c, idpath,id)
+        jp.value(c, idpath, id)
         console.log('dit is het id path na mapping')
         console.log(jp.query(c, idpath))
-        pcontent[key]['content'] = JSON.stringify(c)
+        pcontent[key].content = JSON.stringify(c)
       })
       if (!recordDict[batch]) {
         recordDict[batch] = {
@@ -255,7 +250,7 @@ ApiSchema.methods.getStream = async function getApiStream (collection, model, r)
     sourceDict = {}
     const urlDict = {}
     Object.keys(recordDict).forEach((key) => {
-      if(!(key in sourceDict)){
+      if (!(key in sourceDict)) {
         sourceDict[key] = {}
       }
       urls.forEach((url, urlind) => {
@@ -263,18 +258,19 @@ ApiSchema.methods.getStream = async function getApiStream (collection, model, r)
         urlDict[url] = st
         sourceDict[key][st] = {}
       })
-      recordDict[key].entries.forEach(rec => {
+      recordDict[key].entries.forEach((rec) => {
         Object.keys(rec).forEach((key2) => {
-          if((typeof rec[key2] === 'object') && ('url' in rec[key2])){
-            const {url, header, content} = rec[key2]
-            if (Object.keys(sourceDict[key][urlDict[url]]).length===0){
+          if ((typeof rec[key2] === 'object') && ('url' in rec[key2])) {
+            const { url, header, content } = rec[key2]
+            if (Object.keys(sourceDict[key][urlDict[url]]).length === 0) {
               sourceDict[key][urlDict[url]] = JSON.parse(header)
             }
-            sourceDict[key][urlDict[url]]['records'].push(JSON.parse(content))
+            sourceDict[key][urlDict[url]].records.push(JSON.parse(content))
           }
         })
       })
     })
+    if (mappingmethod === 'rml') {
       return mapRMLsplit(sourceDict, rml, rmlmapperPath, tempFolderPath, name, urls).then((out) => {
         const outconcat = [].concat.apply([], out)
         console.log('na mapping ziet de data van ' + this.name + 'er zo uit')
@@ -291,6 +287,24 @@ ApiSchema.methods.getStream = async function getApiStream (collection, model, r)
           })
         }
       })
+    } else if (mappingmethod === 'yarrrml') {
+      return mapYARRRMLsplit(sourceDict, rml, rmlmapperPath, tempFolderPath, name, urls).then((out) => {
+        const outconcat = [].concat.apply([], out)
+        console.log('na mapping ziet de data van ' + this.name + 'er zo uit')
+        console.log(outconcat)
+        if (EXPAND) {
+          return expandDepth(outconcat)
+          return transformStream(expandDepth(outconcat), collection, localContext, globalContext, meta).then((res) => {
+            return res
+          })
+        } else {
+          return transformStream(outconcat, collection, localContext, globalContext, meta).then((res) => {
+            RedisService.setData(cacheName, JSON.stringify(res))
+            return res
+          })
+        }
+      })
+    }
   })
 }
 
@@ -317,13 +331,29 @@ const relabelBlankNodes = (obj, suffix) => {
 const mapRMLsplit = (sourceDict, rml, rmlmapperPath, tempFolderPath, name, urls) => {
   return Promise.all(Object.keys(sourceDict).map((key) => {
     const sources = sourceDict[key]
-    Object.keys(sources).forEach(key2 => {
-    sources[key2] = JSON.stringify(sources[key2])
-  })
+    Object.keys(sources).forEach((key2) => {
+      sources[key2] = JSON.stringify(sources[key2])
+    })
     tempFolderPath = tempFolderPath + '/' + hash(key)
     console.log('deze data wordt gemapped bij ' + name)
     console.log(sources)
     return mapRML(sources, rml, rmlmapperPath, tempFolderPath, name).then((out) => {
+      relabelBlankNodes(out, key)
+      return out
+    })
+  }))
+}
+
+const mapYARRRMLsplit = (sourceDict, yarrrml, rmlmapperPath, tempFolderPath, name, urls) => {
+  return Promise.all(Object.keys(sourceDict).map((key) => {
+    const sources = sourceDict[key]
+    Object.keys(sources).forEach((key2) => {
+      sources[key2] = JSON.stringify(sources[key2])
+    })
+    tempFolderPath = tempFolderPath + '/' + hash(key)
+    console.log('deze data wordt gemapped bij ' + name)
+    console.log(sources)
+    return mapYARRRML(sources, yarrrml, rmlmapperPath, tempFolderPath, name).then((out) => {
       relabelBlankNodes(out, key)
       return out
     })
@@ -341,7 +371,7 @@ ApiSchema.methods.invokeStream = function invokeApiStream (model) {
   if (changeHash) {
     newChangeHash = changeHash
   }
-  const promArray = endpoints.map(endpoint => {
+  const promArray = endpoints.map((endpoint) => {
     return axios.get(endpoint.url)
   })
   return Promise.all(promArray)
@@ -351,7 +381,7 @@ ApiSchema.methods.invokeStream = function invokeApiStream (model) {
       const changedObjectsArray = []
       const changedObjects = []
       values.forEach((response, ind) => {
-        const {basePath, recordId: idpath, url, name:endpointName} = endpoints[ind]
+        const { basePath, recordId: idpath, url, name: endpointName } = endpoints[ind]
         const { data } = response
         let entries = data
         let strippedData = []
@@ -365,14 +395,14 @@ ApiSchema.methods.invokeStream = function invokeApiStream (model) {
           // update
           const recordid = jp.query(record, idpath)[0]
           const recordHash = hash(record)
-          const hashId = recordid + "+" + url
+          const hashId = recordid + '+' + url
           if (hashId in newChangeHash) {
             if (newChangeHash[hashId] === recordHash) {
               return
             }
           }
           const newid = recordid + '?generatedAtTime=' + new Date(batch).toISOString()
-          if (!(newid in changedObjects)){
+          if (!(newid in changedObjects)) {
             changedObjects[newid] = {
               'typeOf': recordid,
               batch,
@@ -387,9 +417,9 @@ ApiSchema.methods.invokeStream = function invokeApiStream (model) {
             idPath: idpath
           }
           console.log('dit zijn de chagned objects of ' + this.name)
-          console.log(changedObjects[newid]['contents'])
+          console.log(changedObjects[newid].contents)
           console.log(JSON.stringify(changedObjects))
-          if (url === loc.url){
+          if (url === loc.url) {
             const latpath = loc.lat
             const lonpath = loc.lon
             const lat = jp.query(record, latpath)[0]
@@ -407,78 +437,77 @@ ApiSchema.methods.invokeStream = function invokeApiStream (model) {
           //   header: JSON.stringify(strippedData)
           // })
           newChangeHash[hashId] = recordHash
-        })        
+        })
       })
 
-  const locationQuery = (versionOf) => {
-      return ApiModel.aggregate(
-        [
-          { '$lookup': {
-            'from': RecordModel.collection.name,
-            'localField': 'records',
-            'foreignField': '_id',
-            'as': 'records'
-          } },
-          { '$unwind': '$records' },
-          { '$match': {
-            'records.typeOf': versionOf
-          } },
-          {
-            '$sort': { 'records.batch': -1  }
-          },
-          { '$limit': 1 },
-          { '$group': {
-            '_id': '$_id',
-            'records': { '$push': '$records' }
-          } }
-        ])
-        .exec()
-        .then((result) => {
-          return result
-        })
-  }
+      const locationQuery = (versionOf) => {
+        return ApiModel.aggregate(
+          [
+            { '$lookup': {
+              'from': RecordModel.collection.name,
+              'localField': 'records',
+              'foreignField': '_id',
+              'as': 'records'
+            } },
+            { '$unwind': '$records' },
+            { '$match': {
+              'records.typeOf': versionOf
+            } },
+            {
+              '$sort': { 'records.batch': -1 }
+            },
+            { '$limit': 1 },
+            { '$group': {
+              '_id': '$_id',
+              'records': { '$push': '$records' }
+            } }
+          ])
+          .exec()
+          .then((result) => {
+            return result
+          })
+      }
   		const transformObjectWithLat = (key, changedObjects) => {
-  			return new Promise((res,rej)=> {
-        	let objt = {}
+  			return new Promise((res, rej) => {
+        	const objt = {}
         	Object.keys(changedObjects[key]).forEach((key2) => {
         	  objt[key2] = changedObjects[key][key2]
-        	});
-        	objt['id'] = key
+        	})
+        	objt.id = key
         	res(objt)
   			})
   		}
 
   		const tranformObjectWithoutLat = (key, changedObjects) => {
- 				return new Promise((res,rej)=> {
-        	let objt = {}
+ 				return new Promise((res, rej) => {
+        	const objt = {}
         	Object.keys(changedObjects[key]).forEach((key2) => {
         	  objt[key2] = changedObjects[key][key2]
-        	});
-        	objt['id'] = key
-        	locationQuery(objt['typeOf']).then(result => {
+        	})
+        	objt.id = key
+        	locationQuery(objt.typeOf).then((result) => {
         		// console.log(result['records'].length)
-        	  if(result.length > 0 && 'records' in result[0] && (result[0]['records'].length > 0)){
-        	    if ('lat' in result[0]['records'][0]){
-        	      const {lat, lon} = result[0]['records'][0]
-        	      objt['lat'] = lat
-        	      objt['lon'] = lon
+        	  if (result.length > 0 && 'records' in result[0] && (result[0].records.length > 0)) {
+        	    if ('lat' in result[0].records[0]) {
+        	      const { lat, lon } = result[0].records[0]
+        	      objt.lat = lat
+        	      objt.lon = lon
         	    }
         	  }
         	  res(objt)
-        	})		
+        	})
  				})
   		}
 
-  		const transformQ = Object.keys(changedObjects).map(key=> {
-  			if ('lat' in changedObjects[key]){
-  				return transformObjectWithLat(key,changedObjects)
-  			}
-  			else {
-  				return tranformObjectWithoutLat(key,changedObjects)
+  		const transformQ = Object.keys(changedObjects).map((key) => {
+  			if ('lat' in changedObjects[key]) {
+  				return transformObjectWithLat(key, changedObjects)
+  			} else {
+  				return tranformObjectWithoutLat(key, changedObjects)
   			}
   		})
 
-  		return Promise.all(transformQ).then(changedObjectsA => {
+  		return Promise.all(transformQ).then((changedObjectsA) => {
   			return {
   				changeHash: newChangeHash,
   				changedObjectsArray: changedObjectsA
@@ -507,7 +536,7 @@ ApiSchema.methods.invokeStream = function invokeApiStream (model) {
       //       changedObjectsArray.push(objt)
       //     })
       //   }
-        
+
       // });
       // console.log(changedObjectsArray.length)
       // return {
@@ -526,13 +555,13 @@ ApiSchema.methods.invoke = function invokeApi (model) {
     // if (cachedResponse) {
     //   return JSON.parse(cachedResponse)
     // }
-    const promArray = this.endpoints.map(endpoint => {
+    const promArray = this.endpoints.map((endpoint) => {
       const client = new HttpService(endpoint.url)
       return client.get()
     })
     return Promise.all(promArray).then((values) => {
       let ind = 0
-      const sourcesMap = values.map(value => {
+      const sourcesMap = values.map((value) => {
         ind = ind + 1
         return {
           name: 'data' + (ind === 1 ? '' : ind) + '.json',
@@ -540,7 +569,7 @@ ApiSchema.methods.invoke = function invokeApi (model) {
         }
       })
       const sources = {}
-      sourcesMap.forEach(el => {
+      sourcesMap.forEach((el) => {
         sources[el.name] = JSON.stringify(el.data)
       })
       const { rml, yarrrml, paths, name } = this
