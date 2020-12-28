@@ -244,6 +244,8 @@ export default {
     },
     contextCompleted (result) {
       const { localContext, globalContext } = result
+      console.log(localContext)
+      console.log(globalContext)
       this.localContext = localContext
       this.globalContext = globalContext
     },

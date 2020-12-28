@@ -30,14 +30,26 @@ class RedisClient {
     this.expirationTime = 60 * 60 // 1 hour
   }
 
-  setData (name, data) {
+  // const { promisify } = require('util');
+  // const ttl = promisify(client.ttl).bind(client);
+  // client.set('key', 'value!', 'EX', 10);
+  // const remaingTime = await ttl('key');
+
+  setData (name, data, exp) {
     if (!this.client) { return Promise.resolve(null) }
-    return this.client.setAsync(name, data, 'EX', this.expirationTime)
+    return this.client.setAsync(name, data, 'EX', exp || this.expirationTime)
   }
 
   getData (name) {
     if (!this.client) { return Promise.resolve(null) }
     return this.client.getAsync(name)
+  }
+
+  async getTTL (name) {
+    if (!this.client) { return Promise.resolve(null) }
+    const ttl = bluebird.promisify(this.client.ttl).bind(this.client)
+    const remaingTime = await ttl(name)
+    return remaingTime
   }
 
   flushDb () {

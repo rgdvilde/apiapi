@@ -41,7 +41,8 @@ export default {
     return {
       tab: null,
       cards: [{ name: 'Endpoint 1' }],
-      endpoints: [{}]
+      endpoints: [{}],
+      edit: null
     }
   },
   methods: {

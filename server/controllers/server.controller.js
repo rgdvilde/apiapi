@@ -3,7 +3,7 @@ const ApiModel = require('../db/models/api.db.model')
 const CollectionModel = require('../db/models/collection.model')
 const RecordModel = require('../db/models/record.db.model')
 
-const delay = 3000
+let delay = 300
 let samplers = {}
 
 const sampleApis = (collectionId) => {
@@ -20,10 +20,13 @@ module.exports = {
   },
   startSampling (req, res) {
   	const { body } = req
-  	const { collectionId, base } = body
+  	const { collectionId, base, sampleRate } = body
+    clearInterval(samplers[collectionId])
   	const collectionSampler = setInterval(() => {
 	  	CollectionModel.findById(collectionId).then((res) => {
 	    	const { apis } = res
+        delay = sampleRate
+        console.log('sampleRate is ' + delay)
 	    	apis.forEach((apiId) => {
           ApiModel.findById(apiId).then((res) => {
             res.invokeStream().then((res) => {
@@ -45,7 +48,7 @@ module.exports = {
           })
 	    	})
 	  	})
-    }, delay)
+    }, sampleRate * 1000)
     samplers[collectionId] = collectionSampler
     res.json({ ok: 1 })
   },

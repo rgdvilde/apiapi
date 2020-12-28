@@ -10,7 +10,7 @@
             :style="btnStyles"
             :show-btns="false"
             :expandedOnStart="false"
-            @json-change="complete"
+            @json-change="complete_g"
             :mode="'code'" />
         </v-card>
       </v-col>
@@ -25,7 +25,7 @@
               :show-btns="false"
               :style="btnStyles"
               :expandedOnStart="true"
-              @json-change="complete"
+              @json-change="complete_l"
               :mode="'code'" />
           </v-card-text>
         </v-card>
@@ -62,9 +62,15 @@ export default {
     }
   },
   methods: {
-    complete () {
+    complete_g (json) {
       this.$emit('complete', {
         localContext: this.s_localContext,
+        globalContext: JSON.stringify(json)
+      })
+    },
+    complete_l (json) {
+      this.$emit('complete', {
+        localContext: JSON.stringify(json),
         globalContext: this.s_globalContext
       })
     }

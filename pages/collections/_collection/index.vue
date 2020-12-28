@@ -28,9 +28,33 @@
           class="mr-4">
           Clear
         </v-btn>
+        <v-slider
+          v-model="sampleRate"
+          :max="1000"
+          :min="1"
+          class="align-center"
+          hide-details>
+          <template v-slot:append>
+            <v-text-field
+              v-model="sampleRate"
+              class="mt-0 pt-0"
+              hide-details
+              single-line
+              type="number"
+              style="width: 60px" />
+          </template>
+        </v-slider>
+        <v-text-field
+          v-model="maxCacheAge"
+          class="mt-0 pt-0"
+          hide-details
+          single-line
+          type="number"
+          style="width: 60px" />
         <api-list :collection-id="collection._id"
                   :apis="collection.apis"
                   :uploads="collection.uploads" />
+        </v-slider>
       </v-col>
     </v-row>
   </v-container>
@@ -53,7 +77,9 @@ export default {
   },
   data () {
     return {
-      id: this.$route.params.collection
+      id: this.$route.params.collection,
+      sampleRate: 300,
+      maxCacheAge: 300
     }
   },
   computed: {
@@ -64,6 +90,14 @@ export default {
       return this.collectionById(this.id)
     }
   },
+  watch: {
+    collection: {
+      handler (value) {
+        this.sampleRate = value.sampleRate
+      },
+      immediate: true
+    }
+  },
   async fetch ({ store, params }) {
     await store.dispatch('collections/' + actionTypes.FETCH_COLLECTION_BY_ID, params.collection)
   },
@@ -72,9 +106,22 @@ export default {
   },
   methods: {
     startSampling () {
+      const samplePayload = JSON.stringify({
+        'sampleRate': this.sampleRate,
+        'maxCacheAge': this.maxCacheAge
+      })
+      fetch(`${process.env.baseUrl}/api/collection/${this.collection._id}/update`, {
+        method: 'PUT',
+        body: samplePayload,
+        headers: {
+          'Content-Type': 'application/json'
+          // 'Content-Type': 'application/x-www-form-urlencoded',
+        }
+      })
       const payload = JSON.stringify({
         'collectionId': this.collection._id,
-        'base': process.env.baseUrl
+        'base': process.env.baseUrl,
+        'sampleRate': this.sampleRate
       })
       fetch(`${process.env.baseUrl}/api/server/sample/start`, {
         method: 'POST',
@@ -84,6 +131,7 @@ export default {
           // 'Content-Type': 'application/x-www-form-urlencoded',
         }
       })
+      console.log(this.sampleRate)
     },
     stopSampling () {
       const payload = JSON.stringify({

@@ -254,7 +254,7 @@ ApiSchema.methods.getStream = async function getApiStream (collection, model, r)
         sourceDict[key] = {}
       }
       urls.forEach((url, urlind) => {
-        const st = 'data' + (urlind + 1) + '.json'
+        const st = 'Endpoint ' + (urlind + 1)
         urlDict[url] = st
         sourceDict[key][st] = {}
       })
@@ -382,6 +382,7 @@ ApiSchema.methods.invokeStream = function invokeApiStream (model) {
       const changedObjects = []
       values.forEach((response, ind) => {
         const { basePath, recordId: idpath, url, name: endpointName } = endpoints[ind]
+        if (!idpath || idpath === '') { return }
         const { data } = response
         let entries = data
         let strippedData = []
@@ -564,7 +565,7 @@ ApiSchema.methods.invoke = function invokeApi (model) {
       const sourcesMap = values.map((value) => {
         ind = ind + 1
         return {
-          name: 'data' + (ind === 1 ? '' : ind) + '.json',
+          name: 'Endpoint ' + ind,
           data: value.data
         }
       })
@@ -573,20 +574,27 @@ ApiSchema.methods.invoke = function invokeApi (model) {
         sources[el.name] = JSON.stringify(el.data)
       })
       const { rml, yarrrml, paths, name } = this
+      console.log(JSON.stringify(model))
+      const { localContext } = model
       // let data = response
       console.log('±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±')
       console.log('MAPPING ' + name)
       console.log('±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±')
+      console.log(localContext)
       if (rml == '' && yarrrml == '') {
         // data = !this.dataPath ? response : getProp(response, this.dataPath)
         // return mapDef(data, paths, name)
       } else if (yarrrml == '') {
         return mapRML(sources, rml, rmlmapperPath, tempFolderPath, name).then((out) => {
-          return EXPAND ? expandDepth(out) : out
+          const data = EXPAND ? expandDepth(out) : out
+          return jsonld.compact(data, JSON.parse(localContext)).then((result) => {
+            console.log(result)
+            return result
+          })
         })
       } else {
         return mapYARRRML(sources, yarrrml, rmlmapperPath, tempFolderPath, name).then((out) => {
-          return EXPAND ? expandDepth(out) : out
+          return jsonld.compact(data, JSON.parse(localContext)).then((result) => { return result })
         })
       }
     })

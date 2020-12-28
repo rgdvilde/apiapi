@@ -140,28 +140,28 @@
                     <v-col>
                       <v-card @click="setMapMode('RML')">
                         <v-img
-                          lazy-src="https://via.placeholder.com/150x150"
+                          lazy-src="https://picsum.photos/150/150"
                           max-height="150"
                           max-width="150"
-                          src="https://via.placeholder.com/150x150" />
+                          src="https://picsum.photos/150/150" />
                       </v-card>
                     </v-col>
                     <v-col>
                       <v-card @click="setMapMode('YARRRML')">
                         <v-img
-                          lazy-src="https://picsum.photos/id/11/10/6"
+                          lazy-src="https://picsum.photos/150/150"
                           max-height="150"
                           max-width="150"
-                          src="https://via.placeholder.com/150x150" />
+                          src="https://picsum.photos/150/150" />
                       </v-card>
                     </v-col>
                     <v-col>
                       <v-card @click="setMapMode('RMLMapper')">
                         <v-img
-                          lazy-src="https://via.placeholder.com/150x150"
+                          lazy-src="https://picsum.photos/150/150"
                           max-height="150"
                           max-width="150"
-                          src="https://via.placeholder.com/150x150" />
+                          src="https://picsum.photos/150/150" />
                       </v-card>
                     </v-col>
                   </v-row>
@@ -350,6 +350,7 @@ export default {
       this.$refs.form.reset()
     },
     updateEndpointCards (endpointCards) {
+      this.validated = false
       if (endpointCards.length > 1) {
         this.mappings = ['RML', 'YARRRML']
       } else {
@@ -389,10 +390,26 @@ export default {
       //     })
       //     .catch(err => console.error(err))
       // }
+
+      //         ...this.cardInfo,
+      //   lat,
+      //   lon,
+      //   basePath,
+      //   recordId
+      // }
       console.log(this.collection.model)
-      const resp = await axios.get(this.url)
-      this.endpointData = resp.data
-      this.validated = valid
+      await this.endpoints.forEach(async (endpoint, ind) => {
+        try {
+          console.log('endpoint')
+          const resp = await axios.get(this.url)
+          console.log(resp)
+          const { data } = resp
+          if (ind === 0) { this.endpointData = data }
+          if (ind === this.endpoints.length - 1) { this.validated = true }
+        } catch (error) {
+          this.validated = false
+        }
+      })
     },
     addHeader () {
       this.customHeaders += 1

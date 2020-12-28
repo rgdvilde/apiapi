@@ -29,6 +29,16 @@ const CollectionSchema = mongoose.Schema({
     type: String,
     required: false
   },
+  sampleRate: {
+    type: Number,
+    required: false,
+    default: 300
+  },
+  maxCacheAge: {
+    type: Number,
+    required: false,
+    default: 300
+  },
   apis: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Api' }],
   uploads: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Upload' }],
   model: {
@@ -67,6 +77,7 @@ CollectionSchema.methods.getApiStreams = async function getCollectionApiStreams 
   let pageUrl = ''
   let cached = false
   let cacheRes = {}
+  let maxCacheAge = this.sampleRate
   return DataModelModel.findById(this.model)
     .exec()
     .then((model) => {
@@ -96,10 +107,14 @@ CollectionSchema.methods.getApiStreams = async function getCollectionApiStreams 
             page = (Math.floor(await Queries.olderRecords(this._id, parseInt(unixtime)) / PAGESIZE))
           }
           pageUrl = this.base + '/api/data/' + this._id + '/' + page + '/stream' + (xyz ? '/' + z + '/' + x + '/' + y : '')
-
           if (page < maxPage) {
+            maxCacheAge = this.maxCacheAge
             const cachedResponse = await RedisService.getData(pageUrl)
             if (cachedResponse) {
+              const ttl = await RedisService.getTTL(pageUrl)
+              // maxCacheAge = ttl
+              console.log('ttl')
+              console.log(ttl)
               console.log('this is the cached data')
               console.log(cachedResponse)
               cached = true
@@ -136,7 +151,7 @@ CollectionSchema.methods.getApiStreams = async function getCollectionApiStreams 
     }).then((results) => {
       console.log('dit is results')
       console.log(results)
-      if (cached) { return cacheRes }
+      if (cached) { return { 'transformedStream': cacheRes, maxCacheAge } }
 
       return DataModelModel.findById(this.model)
         .exec()
@@ -154,8 +169,11 @@ CollectionSchema.methods.getApiStreams = async function getCollectionApiStreams 
               console.log('dit wordt gesaved naar redis')
               console.log(JSON.stringify(transformedStream))
               console.log(pageUrl)
-              RedisService.setData(pageUrl, JSON.stringify(transformedStream))
-              return transformedStream
+              RedisService.setData(pageUrl, JSON.stringify(transformedStream), this.maxCacheAge)
+              return {
+                transformedStream,
+                maxCacheAge
+              }
             })
           })
         })

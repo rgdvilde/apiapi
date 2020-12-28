@@ -17,6 +17,14 @@ module.exports = {
       .then(result => res.json(result))
       .catch(err => next(err))
   },
+  updateSampleRate (req, res, next) {
+    console.log(req)
+    const { body } = req
+    CollectionModel.updateOne({ _id: body.collectionId }, { sampleRate: body.sampleRate })
+      .exec()
+      .then(doc => res.json(doc))
+      .catch(err => next(err))
+  },
   create (req, res, next) {
     const newCollection = new CollectionModel(req.body)
     newCollection.save()
@@ -26,6 +34,13 @@ module.exports = {
   updateOne (req, res, next) {
     const { body, params: { id } } = req
     CollectionModel.replaceOne({ _id: id }, body)
+      .exec()
+      .then(doc => res.json(doc))
+      .catch(err => next(err))
+  },
+  actualUpdateOne (req, res, next) {
+    const { body, params: { id } } = req
+    CollectionModel.updateOne({ _id: id }, body)
       .exec()
       .then(doc => res.json(doc))
       .catch(err => next(err))

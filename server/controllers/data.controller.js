@@ -24,8 +24,10 @@ module.exports = {
     console.log(collectionId, x, y, z, page, unixtime)
     CollectionModel.findById(collectionId).then((doc) => {
       doc.getApiStreams(x, y, z, page, unixtime).then((result) => {
+        const { transformedStream, maxCacheAge } = result
+        res.set('Cache-control', 'max-age=' + maxCacheAge)
         res.set('Content-Type', 'application/ld+json')
-        res.json(result)
+        res.json(transformedStream)
       })
     }).catch(next)
   },
