@@ -26,6 +26,77 @@
       </v-icon>
       Location
     </v-btn>
+    </v-btn>
+    <v-dialog
+      v-model="dialog"
+      max-width="600px">
+      <template v-slot:activator="{ on, attrs }">
+        <v-btn
+          v-bind="attrs"
+          v-on="on"
+          outlined>
+          <v-icon>
+            mdi-lock
+          </v-icon>
+          Request Parameters
+        </v-btn>
+        </v-btn>
+      </template>
+      <v-card>
+        <v-card-title>
+          <span class="headline">Request Parameters</span>
+        </v-card-title>
+        <v-card-text>
+          <v-container>
+            <v-row v-for="(req_param,index) in cardInfo.req_params"
+                   v-bind:key="index">
+              <v-col
+                cols="2">
+                <v-btn
+                  @click="cardInfo.req_params.splice(index,1)"
+                  icon>
+                  <v-icon>mdi-close</v-icon>
+                </v-btn>
+              </v-col>
+              </v-btn>
+              <v-col
+                cols="5">
+                <v-text-field
+                  v-model="req_param['key']"
+                  label="Key"
+                  hide-details="auto" />
+              </v-col>
+              <v-col
+                cols="5">
+                <v-text-field
+                  v-model="req_param['value']"
+                  label="Value"
+                  hide-details="auto" />
+              </v-col>
+            </v-row>
+            <!--     <v-sheet v-for="label in keys"
+             :key="label">
+      <v-textarea
+        :label="label"
+        v-model="apimodel[label]"
+        flat
+        filled
+        dense
+        auto-grow />
+    </v-sheet> -->
+          </v-container>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn
+            @click="cardInfo.req_params.push({'key':'','value':''})"
+            color="blue darken-1"
+            text>
+            Add
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
     <v-text-field
       v-model="cardInfo.name"
       :label="'name'"
@@ -56,7 +127,8 @@ export default {
       value: '',
       b_eventStream: false,
       b_location: false,
-      cardInfo: {}
+      cardInfo: { 'req_params': [] },
+      dialog: false
     }
   },
   methods: {

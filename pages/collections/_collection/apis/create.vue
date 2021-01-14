@@ -193,12 +193,36 @@
 
               <v-card>
                 <v-card-title class="headline grey lighten-2">
-                  Mapping
+                  Validation Report
+                </v-card-title>
+
+                <v-card-text class="grey lighten-2">
+                  <validation-report :validationReport="mapValidation" />
+                </v-card-text>
+              </v-card>
+            </v-dialog>
+            <v-dialog
+              v-model="d_shaclView"
+              width="2000">
+              <template v-slot:activator="{ on, attrs }">
+                <v-btn
+                  v-bind="attrs"
+                  v-on="on"
+                  icon>
+                  <v-icon>mdi-alpha-s-box</v-icon>
+                </v-btn>
+              </template>
+
+              <v-card>
+                <v-card-title class="headline grey lighten-2">
+                  SHACL
                 </v-card-title>
 
                 <v-card-text>
-                  <validation-report :validationReport="mapValidation" />
+                  <pre>{{this.collection.model.shacl}}</pre>
                 </v-card-text>
+
+                <v-divider />
               </v-card>
             </v-dialog>
           </div>
@@ -290,7 +314,8 @@ export default {
       d_endpointInfo: false,
       d_mappingSelect: false,
       constraintsValidated: false,
-      d_mapValidation: false
+      d_mapValidation: false,
+      endpointResp: {}
     }
   },
   computed: {
@@ -362,7 +387,10 @@ export default {
           name: card.name,
           url: card.url,
           basePath: card.basePath,
-          recordId: card.recordId
+          recordId: card.recordId,
+          lat: card.lat ? card.lat : '',
+          lon: card.lon ? card.lon : '',
+          req_params: card.req_params ? card.req_params : []
         }
       })
       this.urls = []
@@ -401,11 +429,19 @@ export default {
       await this.endpoints.forEach(async (endpoint, ind) => {
         try {
           console.log('endpoint')
-          const resp = await axios.get(this.url)
+          const { req_params: reqParams, url } = endpoint
+          const transformedparams = {}
+          reqParams.forEach((param) => {
+            transformedparams[param.key] = param.value
+          })
+          const resp = await axios.get(url, {
+            params: transformedparams
+          })
           console.log(resp)
           const { data } = resp
           if (ind === 0) { this.endpointData = data }
           if (ind === this.endpoints.length - 1) { this.validated = true }
+          this.endpoints[ind].data = JSON.stringify(data)
         } catch (error) {
           this.validated = false
         }
@@ -440,7 +476,8 @@ export default {
       console.log(this.collection.model.shacl)
       if (this.collection.model.shacl) {
         console.log(this.url)
-        const data = { 'shacl': this.collection.model.shacl, 'rml': this.rml, 'url': this.url, 'mapmode': 'rml' }
+        const data = { 'shacl': this.collection.model.shacl, 'rml': this.rml, 'url': this.url, 'mapmode': 'rml', 'endpoints': this.endpoints }
+        console.log(data)
         fetch(`${process.env.baseUrl}/api/map/validate`, {
           method: 'POST',
           body: JSON.stringify(data),
@@ -469,7 +506,7 @@ export default {
     yarrrmlCompleted (yarrrml) {
       this.yarrrml = yarrrml
       if (this.collection.model.shacl) {
-        const data = { 'shacl': this.collection.model.shacl, 'yarrrml': this.yarrrml, 'url': this.url, 'mapmode': 'yarrrml' }
+        const data = { 'shacl': this.collection.model.shacl, 'yarrrml': this.yarrrml, 'url': this.url, 'mapmode': 'yarrrml', 'endpointResp': this.endpointResp }
         fetch(`${process.env.baseUrl}/api/map/validate`, {
           method: 'POST',
           body: JSON.stringify(data),

@@ -50,67 +50,90 @@ module.exports = {
   },
 
   mapValidate (req, res) {
-    const { url, rml, yarrrml, mapmode, shacl: shapes } = req.body
+    const { url, rml, yarrrml, mapmode, shacl: shapes, endpoints } = req.body
+    sources = {}
+    endpoints.forEach((endpoint, index) => {
+      const name = 'Endpoint ' + (index + 1)
+      sources[name] = endpoint.data
+    })
     if (mapmode === 'rml') {
       console.log('validating rml')
-      console.log(req)
+      // console.log(req)
+      console.log(endpoints)
+      console.log(sources)
+      console.log(rml)
       const wrapper = new RMLMapperWrapper(rmlmapperPath, tempFolderPath, true)
-      axios.get(url)
-        .then((response) => {
-          const sources = {
-            'data1.json': JSON.stringify(response.data)
-          }
-          return wrapper.execute(rml, { sources, generateMetadata: false, serialization: 'jsonld' }).then((resp) => {
-            const validator = new SHACLValidator()
-            validator.validate(resp.output, 'application/ld+json', shapes, 'text/turtle', function (e, report) {
-              console.log('Conforms? ' + report.conforms())
-              if (report.conforms() === false) {
-                report.results().forEach(function (result) {
-                  console.log(' - Severity: ' + result.severity() + ' for ' + result.sourceConstraintComponent())
-                })
-                res.json(report.results())
-              } else {
-                console.log(report.conforms())
-                res.json(report.conforms())
-              }
+      return wrapper.execute(rml, { sources, generateMetadata: false, serialization: 'jsonld' }).then((resp) => {
+        const validator = new SHACLValidator()
+        validator.validate(resp.output, 'application/ld+json', shapes, 'text/turtle', function (e, report) {
+          console.log('Conforms? ' + report.conforms())
+          if (report.conforms() === false) {
+            report.results().forEach(function (result) {
+              console.log(' - Severity: ' + result.severity() + ' for ' + result.sourceConstraintComponent())
             })
-          })
+            res.json(report.results())
+          } else {
+            console.log(report.conforms())
+            res.json(report.conforms())
+          }
         })
-        .catch((error) => {
-          console.log(error)
-        })
+      })
+      // return Promise.all(Object.keys(endpointResp).forEach((key, index) => {
+      //   const name = 'Endpoint ' + (index + 1)
+      //   const sources = {
+      //     name: endpointResp[key]
+      //   }
+      // }))
+      // axios.get(url)
+      //   .then((response) => {
+      //     const sources = {
+      //       'data1.json': JSON.stringify(response.data)
+      //     }
+      //     return wrapper.execute(rml, { sources, generateMetadata: false, serialization: 'jsonld' }).then((resp) => {
+      //       const validator = new SHACLValidator()
+      //       validator.validate(resp.output, 'application/ld+json', shapes, 'text/turtle', function (e, report) {
+      //         console.log('Conforms? ' + report.conforms())
+      //         if (report.conforms() === false) {
+      //           report.results().forEach(function (result) {
+      //             console.log(' - Severity: ' + result.severity() + ' for ' + result.sourceConstraintComponent())
+      //           })
+      //           res.json(report.results())
+      //         } else {
+      //           console.log(report.conforms())
+      //           res.json(report.conforms())
+      //         }
+      //       })
+      //     })
+      //   })
+      //   .catch((error) => {
+      //     console.log(error)
+      //   })
     } else if (mapmode === 'yarrrml') {
       const wrapper = new RMLMapperWrapper(rmlmapperPath, tempFolderPath, true)
       const y2r = new yarrrmlParser()
       const triples = y2r.convert(yarrrml)
       const writer = new N3.Writer({})
-      axios.get(url)
-        .then((response) => {
-          writer.addQuads(triples)
-          writer.end((error, result) => {
-            const wrapper = new RMLMapperWrapper(rmlmapperPath, tempFolderPath, true)
-            const sources = {
-              'data.json': JSON.stringify(response.data)
-            }
-            return wrapper.execute(result, { sources, generateMetadata: false, serialization: 'jsonld' }).then((resp) => {
-              const validator = new SHACLValidator()
-              validator.validate(resp.output, 'application/ld+json', shapes, 'text/turtle', function (e, report) {
-                console.log('Conforms? ' + report.conforms())
-                if (report.conforms() === false) {
-                  report.results().forEach(function (shaclresult) {
-                    console.log(' - Severity: ' + shaclresult.severity() + ' for ' + shaclresult.sourceConstraintComponent())
-                  })
-                  res.json(report.results())
-                } else {
-                  res.json(report.conforms())
-                }
+      writer.addQuads(triples)
+      writer.end((error, result) => {
+        const wrapper = new RMLMapperWrapper(rmlmapperPath, tempFolderPath, true)
+        const sources = {
+          'data.json': JSON.stringify(response.data)
+        }
+        return wrapper.execute(result, { sources, generateMetadata: false, serialization: 'jsonld' }).then((resp) => {
+          const validator = new SHACLValidator()
+          validator.validate(resp.output, 'application/ld+json', shapes, 'text/turtle', function (e, report) {
+            console.log('Conforms? ' + report.conforms())
+            if (report.conforms() === false) {
+              report.results().forEach(function (shaclresult) {
+                console.log(' - Severity: ' + shaclresult.severity() + ' for ' + shaclresult.sourceConstraintComponent())
               })
-            })
+              res.json(report.results())
+            } else {
+              res.json(report.conforms())
+            }
           })
         })
-        .catch((error) => {
-          console.log(error)
-        })
+      })
     }
   }
 }

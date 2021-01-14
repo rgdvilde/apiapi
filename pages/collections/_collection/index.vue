@@ -10,51 +10,140 @@
     </p>
     <v-row>
       <v-col lg="8">
-        <v-btn
-          @click="startSampling"
-          text
-          class="mr-4">
-          {{ $t('actions.reset') }}
-        </v-btn>
-        <v-btn
-          @click="stopSampling"
-          text
-          class="mr-4">
-          Stop
-        </v-btn>
-        <v-btn
-          @click="clearSampling"
-          text
-          class="mr-4">
-          Clear
-        </v-btn>
-        <v-slider
-          v-model="sampleRate"
-          :max="1000"
-          :min="1"
-          class="align-center"
-          hide-details>
-          <template v-slot:append>
-            <v-text-field
-              v-model="sampleRate"
-              class="mt-0 pt-0"
-              hide-details
-              single-line
-              type="number"
-              style="width: 60px" />
-          </template>
-        </v-slider>
-        <v-text-field
-          v-model="maxCacheAge"
-          class="mt-0 pt-0"
-          hide-details
-          single-line
-          type="number"
-          style="width: 60px" />
+        <v-toolbar>
+          Sampling
+          <v-dialog
+            v-model="d_basicInfo"
+            width="500">
+            <template v-slot:activator="{ on, attrs }">
+              <v-btn
+                v-bind="attrs"
+                v-on="on"
+                icon>
+                <v-icon>mdi-information</v-icon>
+              </v-btn>
+            </template>
+
+            <v-card>
+              <v-card-title class="headline grey lighten-2">
+                Basic Information
+              </v-card-title>
+
+              <v-card-text>
+                Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+              </v-card-text>
+
+              <v-divider />
+            </v-card>
+          </v-dialog>
+          <v-dialog
+            v-model="dialog"
+            v-if="!created"
+            max-width="600px">
+            <template v-slot:activator="{ on, attrs }">
+              <v-btn
+                v-bind="attrs"
+                v-on="on"
+                icon>
+                <v-icon>mdi-play-circle-outline</v-icon>
+              </v-btn>
+            </template>
+            <v-card>
+              <v-card-title>
+                <span class="headline">Configure sampling process</span>
+              </v-card-title>
+              <v-card-text>
+                <v-container>
+                  <v-row>
+                    <v-col
+                      cols="6">
+                      Sample Rate (seconds)
+                    </v-col>
+                    <v-col
+                      cols="12">
+                      <v-slider
+                        v-model="sampleRate"
+                        :max="1000"
+                        :min="1"
+                        class="align-center"
+                        hide-details>
+                        <template v-slot:append>
+                          <v-text-field
+                            v-model="sampleRate"
+                            class="mt-0 pt-0"
+                            hide-details
+                            single-line
+                            type="number"
+                            style="width: 60px" />
+                        </template>
+                      </v-slider>
+                    </v-col>
+                  </v-row>
+                  <v-row>
+                    <v-col
+                      cols="6">
+                      Cache Time (seconds)
+                    </v-col>
+                    <v-col
+                      cols="12">
+                      <v-text-field
+                        v-model="maxCacheAge"
+                        class="mt-0 pt-0"
+                        hide-details
+                        single-line
+                        type="number"
+                        style="width: 60px" />
+                    </v-col>
+                  </v-row>
+                </v-container>
+              </v-card-text>
+              <v-card-actions>
+                <v-spacer />
+                <v-btn
+                  @click="dialog = false"
+                  color="blue darken-1"
+                  text>
+                  Close
+                </v-btn>
+                <v-btn
+                  @click="dialog = false;created=true;startSampling()"
+                  color="blue darken-1"
+                  text>
+                  Save and start
+                </v-btn>
+              </v-card-actions>
+            </v-card>
+          </v-dialog>
+          <v-btn
+            v-bind="attrs"
+            v-on="on"
+            v-if="started && created"
+            @click="stopSampling"
+            icon>
+            <v-icon>mdi-pause-circle</v-icon>
+          </v-btn>
+          <v-btn
+            v-bind="attrs"
+            v-on="on"
+            v-if="!started && created"
+            @click="startSampling"
+            icon>
+            <v-icon>mdi-play-circle</v-icon>
+          </v-btn>
+          <v-btn
+            v-bind="attrs"
+            v-on="on"
+            v-if="!started && created"
+            @click="clearSampling"
+            icon>
+            <v-icon>mdi-delete</v-icon>
+          </v-btn>
+        </v-toolbar>
         <api-list :collection-id="collection._id"
                   :apis="collection.apis"
                   :uploads="collection.uploads" />
         </v-slider>
+        </v-btn>
       </v-col>
     </v-row>
   </v-container>
@@ -79,7 +168,10 @@ export default {
     return {
       id: this.$route.params.collection,
       sampleRate: 300,
-      maxCacheAge: 300
+      maxCacheAge: 300,
+      started: false,
+      dialog: false,
+      created: false
     }
   },
   computed: {
@@ -106,6 +198,7 @@ export default {
   },
   methods: {
     startSampling () {
+      this.started = true
       const samplePayload = JSON.stringify({
         'sampleRate': this.sampleRate,
         'maxCacheAge': this.maxCacheAge
@@ -134,6 +227,7 @@ export default {
       console.log(this.sampleRate)
     },
     stopSampling () {
+      this.started = false
       const payload = JSON.stringify({
         'collectionId': this.collection._id
       })
@@ -147,6 +241,10 @@ export default {
       })
     },
     clearSampling () {
+      this.started = false
+      this.created = false
+      this.sampleRate = 300
+      this.maxCacheAge = 300
       const payload = JSON.stringify({
         'collectionId': this.collection._id
       })

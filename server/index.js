@@ -34,8 +34,8 @@ async function start () {
 
   // Give nuxt middleware to express
   app.use(cors())
-  app.use(bodyParser.urlencoded({ extended: true }))
-  app.use(bodyParser.json())
+  app.use(bodyParser.urlencoded({ extended: true, limit: '200mb' }))
+  app.use(bodyParser.json({ limit: '200mb' }))
   app.use(morgan('combined'))
   app.use((req, res, next) => {
     const url = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/apiapi'

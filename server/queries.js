@@ -9,9 +9,9 @@ exports.loadRecord = (m) => { RecordModel = m }
 exports.loadModel = (m) => { ModelModel = m }
 
 exports.q_getFragmentIds = (id, skip, limit, x, y, z) => {
-  console.log('dit is skip en limit')
-  console.log(skip)
-  console.log(limit)
+  // console.log('dit is skip en limit')
+  // console.log(skip)
+  // console.log(limit)
   const xyz = x & y & z
   if (xyz) {
     return q_getFragmentIdsXYZ(id, skip, limit, x, y, z).then((r) => { return r })
@@ -59,9 +59,9 @@ exports.q_getFragmentIds = (id, skip, limit, x, y, z) => {
     	  .exec()
     	  .catch((err) => { console.log(err) })
     	  .then((result) => {
-      	console.log('this is the amount of recors selected')
-      	console.log(result.length)
-      	console.log(result)
+      	// console.log('this is the amount of recors selected')
+      	// console.log(result.length)
+      	// console.log(result)
     	    return result
     	  })
     	  .catch((err) => { console.log(err) })
@@ -184,9 +184,9 @@ const q_getFragmentIdsXYZ = (id, skip, limit, x, y, z) => {
     .exec()
     .catch((err) => { console.log(err) })
     .then((result) => {
-      	console.log('this is the amount of recors selected with XYZ selection')
-      	console.log(result.length)
-      	console.log(JSON.stringify(result))
+      	// console.log('this is the amount of recors selected with XYZ selection')
+      	// console.log(result.length)
+      	// console.log(JSON.stringify(result))
       console.log('coordinates are ' + JSON.stringify(cor))
       return result
     })
@@ -252,8 +252,8 @@ const q_i_getRecordCountES = (id) => {
     ])
     .exec()
     .then((result) => {
-      console.log('counting result')
-      console.log(result)
+      // console.log('counting result')
+      // console.log(result)
       if (!result[0]) { return 0 }
       return result[0].record_amount
     })
@@ -310,8 +310,8 @@ const q_i_getRecordCountESXYZ = (id, x, y, z) => {
     ])
     .exec()
     .then((result) => {
-      console.log(result)
-      console.log('xyz count results are' + (result[0] ? result[0].record_amount : 0))
+      // console.log(result)
+      // console.log('xyz count results are' + (result[0] ? result[0].record_amount : 0))
       if (!result[0]) { return 0 }
       return result[0].record_amount
     })
@@ -324,10 +324,10 @@ exports.q_getRecordCount = (id, x, y, z) => {
     	  if (result) { return result } else { return 0 }
     	})
   } else {
-    console.log('retrieve amount of XYZ')
+    // console.log('retrieve amount of XYZ')
     return q_i_getRecordCountESXYZ(id, x, y, z).then((result) => {
       if (result) {
-        console.log('de amount of records xyz is ' + result)
+        // console.log('de amount of records xyz is ' + result)
         return result
       } else { return 0 }
     })
@@ -387,9 +387,9 @@ exports.olderRecords = (id, unixtime) => {
 
 exports.olderRecordsXYZ = (id, unixtime, x, y, z) => {
   const cor = calculateSquare(x, y, z)
-  console.log('time')
-  console.log(unixtime)
-  console.log(x, y, z)
+  // console.log('time')
+  // console.log(unixtime)
+  // console.log(x, y, z)
   return CollectionModel.aggregate(
     [
       { '$match': {
@@ -434,8 +434,8 @@ exports.olderRecordsXYZ = (id, unixtime, x, y, z) => {
     ])
     .exec()
     .then((result) => {
-      console.log('dit zijn de records die ouder zijn')
-      console.log(result)
+      // console.log('dit zijn de records die ouder zijn')
+      // console.log(result)
       if (!result[0]) {
         return 0
       } else {

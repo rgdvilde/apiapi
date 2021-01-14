@@ -48,7 +48,7 @@ const CollectionSchema = mongoose.Schema({
   }
 })
 
-const PAGESIZE = 5
+const PAGESIZE = 100
 
 CollectionSchema.methods.invokeApis = function invokeCollectionApis () {
   return DataModelModel.findById(this.model)
@@ -86,7 +86,7 @@ CollectionSchema.methods.getApiStreams = async function getCollectionApiStreams 
       })
         .exec()
         .then(async (apiss) => {
-          console.log(x, y, z)
+          // console.log(x, y, z)
           if (x) { x = parseInt(x) }
           if (y) { y = parseInt(y) }
           if (z) { z = parseInt(z) }
@@ -109,20 +109,21 @@ CollectionSchema.methods.getApiStreams = async function getCollectionApiStreams 
           pageUrl = this.base + '/api/data/' + this._id + '/' + page + '/stream' + (xyz ? '/' + z + '/' + x + '/' + y : '')
           if (page < maxPage) {
             maxCacheAge = this.maxCacheAge
-            const cachedResponse = await RedisService.getData(pageUrl)
+            // const cachedResponse = await RedisService.getData(pageUrl)
+            const cachedResponse = false
             if (cachedResponse) {
               const ttl = await RedisService.getTTL(pageUrl)
               // maxCacheAge = ttl
-              console.log('ttl')
-              console.log(ttl)
-              console.log('this is the cached data')
-              console.log(cachedResponse)
+              // console.log('ttl')
+              // console.log(ttl)
+              // console.log('this is the cached data')
+              // console.log(cachedResponse)
               cached = true
               cacheRes = JSON.parse(cachedResponse)
               return {}
             }
           }
-          console.log('the page number is:' + page)
+          // console.log('the page number is:' + page)
           return Queries.q_getFragmentIds(this._id, page * PAGESIZE, (page + 1) * PAGESIZE, x, y, z).then((result) => {
             records.push(result)
             result = result.map((r) => { return '' + r._id })
@@ -131,8 +132,8 @@ CollectionSchema.methods.getApiStreams = async function getCollectionApiStreams 
                 .exec()
                 .then((papi) => {
                   return papi.getStream(this, model, result).then((resss) => {
-                    console.log('dit is result van ret')
-                    console.log(resss)
+                    // console.log('dit is result van ret')
+                    // console.log(resss)
                     return resss
                   })
                 })
@@ -149,26 +150,29 @@ CollectionSchema.methods.getApiStreams = async function getCollectionApiStreams 
         })
       return Promise.all([apiPromise, uploadsPromise])
     }).then((results) => {
-      console.log('dit is results')
-      console.log(results)
+      // console.log('dit is results')
+      // console.log(results)
       if (cached) { return { 'transformedStream': cacheRes, maxCacheAge } }
 
       return DataModelModel.findById(this.model)
         .exec()
         .then((model) => {
           const allData = flattenDepth(results, 2)
+          const start2 = new Date()
           return constructMeta(this, model, records, page, x, y, z).then((meta) => {
-            console.log('dit zijn de ids van alle data')
-            console.log(allData)
-            allData.forEach((dat) => { console.log(dat['@id']) })
-            console.log('contexts')
-            console.log(model)
-            console.log(model.localContext)
-            console.log(model.globalContext)
+            // console.log('dit zijn de ids van alle data')
+            // console.log(allData)
+            // allData.forEach((dat) => { console.log(dat['@id']) })
+            // console.log('contexts')
+            // console.log(model)
+            // console.log(model.localContext)
+            // console.log(model.globalContext)
             return transformStream(allData, this, model.localContext, model.globalContext, meta, page).then((transformedStream) => {
-              console.log('dit wordt gesaved naar redis')
-              console.log(JSON.stringify(transformedStream))
-              console.log(pageUrl)
+              // console.log('dit wordt gesaved naar redis')
+              // console.log(JSON.stringify(transformedStream))
+              // console.log(pageUrl)
+              const end2 = new Date() - start2
+              console.info('Execution time tranform: %dms', end2)
               RedisService.setData(pageUrl, JSON.stringify(transformedStream), this.maxCacheAge)
               return {
                 transformedStream,
@@ -201,8 +205,8 @@ const calculateSquare = (x, y, z) => {
 
 const constructMeta = (collection, model, data, page, x, y, z) => {
   const { latPath: shaclLatPath, lonPath: shaclLonPath } = model
-  console.log('data')
-  console.log(data)
+  // console.log('data')
+  // console.log(data)
   if (data.length < 1) {
     return new Promise((res, rej) => { res({}) })
   }
@@ -224,8 +228,8 @@ const constructMeta = (collection, model, data, page, x, y, z) => {
   }
 
   const timeMM = []
-  console.log('dit zijn de records van alle data samen')
-  console.log(data)
+  // console.log('dit zijn de records van alle data samen')
+  // console.log(data)
   data = data[0]
   data.forEach((r) => {
     const { id, contents, batch } = r
@@ -240,8 +244,8 @@ const constructMeta = (collection, model, data, page, x, y, z) => {
       timeMM[1] = batch
     }
   })
-  console.log('dit is de time dict')
-  console.log(timeMM)
+  // console.log('dit is de time dict')
+  // console.log(timeMM)
   const pagePromise = new Promise((resolve, reject) => {
     const calcPageCount = (page, size, total) => {
       const before = page * size
@@ -258,12 +262,12 @@ const constructMeta = (collection, model, data, page, x, y, z) => {
       })
     }
   })
-  console.log('coordinates are')
-  console.log(xyz)
-  console.log(x)
-  console.log(y)
-  console.log(z)
-  console.log(x && y && z)
+  // console.log('coordinates are')
+  // console.log(xyz)
+  // console.log(x)
+  // console.log(y)
+  // console.log(z)
+  // console.log(x && y && z)
   if (xyz) {
     metaPromiseQueue.push(promiseWrapper(Queries.q_getRecordCount(collectionId, x - 1, y, z), 'lessLon'))
     metaPromiseQueue.push(promiseWrapper(Queries.q_getRecordCount(collectionId, x + 1, y, z), 'greaterLon'))
@@ -373,8 +377,8 @@ const notBlank = (obj) => {
 
 const transformStream = async (obj, collection, lc, gc, meta, page) => {
   const { base, '_id': collectionId } = collection
-  console.log('dit is de data die binnekomt bij de transform stream')
-  console.log(obj)
+  // console.log('dit is de data die binnekomt bij de transform stream')
+  // console.log(obj)
   const versionedData = obj.map((en) => {
     if (notBlank(en)) {
       const { '@id': id } = en
@@ -384,8 +388,8 @@ const transformStream = async (obj, collection, lc, gc, meta, page) => {
       const reg = /.+?(?=\\?generatedAtTime=)/
       const res = reg.exec(decodeURIComponent(id))
       if (!res || res.length < 1) {
-        console.log('dit is de invalid res')
-        console.log(id)
+        // console.log('dit is de invalid res')
+        // console.log(id)
       } else {
         en['dcterms:isVersionOf'] = res[0]
       }

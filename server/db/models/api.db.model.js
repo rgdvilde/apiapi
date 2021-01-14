@@ -216,6 +216,7 @@ ApiSchema.methods.getStream = async function getApiStream (collection, model, r)
   if (int_records.length === 0) {
     return []
   }
+  // console.log(int_records.length)
 
   const query = Queries.q_getApiRecords(this._id, int_records.map((reco) => { return mongoose.Types.ObjectId(reco) }))
   return query.then((result) => {
@@ -236,8 +237,8 @@ ApiSchema.methods.getStream = async function getApiStream (collection, model, r)
         const idpath = pcontent[key].idPath
 
         jp.value(c, idpath, id)
-        console.log('dit is het id path na mapping')
-        console.log(jp.query(c, idpath))
+        // console.log('dit is het id path na mapping')
+        // console.log(jp.query(c, idpath))
         pcontent[key].content = JSON.stringify(c)
       })
       if (!recordDict[batch]) {
@@ -247,6 +248,7 @@ ApiSchema.methods.getStream = async function getApiStream (collection, model, r)
       }
       recordDict[batch].entries.push(pcontent)
     })
+    // console.log(JSON.stringify(recordDict))
     sourceDict = {}
     const urlDict = {}
     Object.keys(recordDict).forEach((key) => {
@@ -262,19 +264,43 @@ ApiSchema.methods.getStream = async function getApiStream (collection, model, r)
         Object.keys(rec).forEach((key2) => {
           if ((typeof rec[key2] === 'object') && ('url' in rec[key2])) {
             const { url, header, content } = rec[key2]
+            // console.log(url)
             if (Object.keys(sourceDict[key][urlDict[url]]).length === 0) {
               sourceDict[key][urlDict[url]] = JSON.parse(header)
             }
-            sourceDict[key][urlDict[url]].records.push(JSON.parse(content))
+            // console.log(sourceDict[key][urlDict[url]])
+            const basePath = endpoints.filter((endpoint) => {
+              // console.log(endpoint.url)
+              // console.log(url)
+              if (endpoint.url === url) {
+                return true
+              } else {
+                return false
+              }
+            })[0].basePath
+            // console.log(basePath)
+            const currentList = jp.query(sourceDict[key][urlDict[url]], basePath)[0]
+            currentList.push(JSON.parse(content))
+            // console.log(jp.query(sourceDict[key][urlDict[url]], basePath))
+            // console.log(currentList)
+            // console.log(JSON.parse(content))
+            jp.value(sourceDict[key][urlDict[url]], basePath, currentList)
+            // console.log(sourceDict[key][urlDict[url]])
           }
         })
       })
     })
     if (mappingmethod === 'rml') {
+      const start = new Date()
+      // console.log(JSON.stringify(sourceDict))
       return mapRMLsplit(sourceDict, rml, rmlmapperPath, tempFolderPath, name, urls).then((out) => {
+        const end = new Date() - start
+        console.info('Api name is ' + name)
+        console.info('Execution time mapping: %dms', end)
+        // console.log(out)
         const outconcat = [].concat.apply([], out)
-        console.log('na mapping ziet de data van ' + this.name + 'er zo uit')
-        console.log(outconcat)
+        // console.log('na mapping ziet de data van ' + this.name + 'er zo uit')
+        // console.log(outconcat)
         if (EXPAND) {
           return expandDepth(outconcat)
           return transformStream(expandDepth(outconcat), collection, localContext, globalContext, meta).then((res) => {
@@ -290,8 +316,8 @@ ApiSchema.methods.getStream = async function getApiStream (collection, model, r)
     } else if (mappingmethod === 'yarrrml') {
       return mapYARRRMLsplit(sourceDict, rml, rmlmapperPath, tempFolderPath, name, urls).then((out) => {
         const outconcat = [].concat.apply([], out)
-        console.log('na mapping ziet de data van ' + this.name + 'er zo uit')
-        console.log(outconcat)
+        // console.log('na mapping ziet de data van ' + this.name + 'er zo uit')
+        // console.log(outconcat)
         if (EXPAND) {
           return expandDepth(outconcat)
           return transformStream(expandDepth(outconcat), collection, localContext, globalContext, meta).then((res) => {
@@ -335,8 +361,8 @@ const mapRMLsplit = (sourceDict, rml, rmlmapperPath, tempFolderPath, name, urls)
       sources[key2] = JSON.stringify(sources[key2])
     })
     tempFolderPath = tempFolderPath + '/' + hash(key)
-    console.log('deze data wordt gemapped bij ' + name)
-    console.log(sources)
+    // console.log('deze data wordt gemapped bij ' + name)
+    // console.log(sources)
     return mapRML(sources, rml, rmlmapperPath, tempFolderPath, name).then((out) => {
       relabelBlankNodes(out, key)
       return out
@@ -351,8 +377,8 @@ const mapYARRRMLsplit = (sourceDict, yarrrml, rmlmapperPath, tempFolderPath, nam
       sources[key2] = JSON.stringify(sources[key2])
     })
     tempFolderPath = tempFolderPath + '/' + hash(key)
-    console.log('deze data wordt gemapped bij ' + name)
-    console.log(sources)
+    // console.log('deze data wordt gemapped bij ' + name)
+    // console.log(sources)
     return mapYARRRML(sources, yarrrml, rmlmapperPath, tempFolderPath, name).then((out) => {
       relabelBlankNodes(out, key)
       return out
@@ -364,9 +390,9 @@ ApiSchema.methods.invokeStream = function invokeApiStream (model) {
   const { changeHash, urls, rml, name, loc, endpoints } = this
   // loc
   // endpoints
-  console.log('±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±')
-  console.log('RECORDS')
-  console.log('±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±')
+  // console.log('±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±')
+  // console.log('RECORDS')
+  // console.log('±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±')
   let newChangeHash = {}
   if (changeHash) {
     newChangeHash = changeHash
@@ -417,9 +443,9 @@ ApiSchema.methods.invokeStream = function invokeApiStream (model) {
             hash: recordHash,
             idPath: idpath
           }
-          console.log('dit zijn de chagned objects of ' + this.name)
-          console.log(changedObjects[newid].contents)
-          console.log(JSON.stringify(changedObjects))
+          // console.log('dit zijn de chagned objects of ' + this.name)
+          // console.log(changedObjects[newid].contents)
+          // console.log(JSON.stringify(changedObjects))
           if (url === loc.url) {
             const latpath = loc.lat
             const lonpath = loc.lon
@@ -556,6 +582,7 @@ ApiSchema.methods.invoke = function invokeApi (model) {
     // if (cachedResponse) {
     //   return JSON.parse(cachedResponse)
     // }
+    const start = new Date()
     const promArray = this.endpoints.map((endpoint) => {
       const client = new HttpService(endpoint.url)
       return client.get()
@@ -569,26 +596,35 @@ ApiSchema.methods.invoke = function invokeApi (model) {
           data: value.data
         }
       })
+      const end = new Date() - start
+      console.info('Api name is ' + this.name)
+      console.info('Execution time retrieving mapping: %dms', end)
+      const start2 = new Date()
       const sources = {}
       sourcesMap.forEach((el) => {
         sources[el.name] = JSON.stringify(el.data)
       })
       const { rml, yarrrml, paths, name } = this
-      console.log(JSON.stringify(model))
+      // console.log(JSON.str?ingify(model))
       const { localContext } = model
       // let data = response
-      console.log('±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±')
-      console.log('MAPPING ' + name)
-      console.log('±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±')
-      console.log(localContext)
+      // console.log('±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±')
+      // console.log('MAPPING ' + name)
+      // console.log('±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±±')
+      // console.log(localContext)
       if (rml == '' && yarrrml == '') {
         // data = !this.dataPath ? response : getProp(response, this.dataPath)
         // return mapDef(data, paths, name)
       } else if (yarrrml == '') {
         return mapRML(sources, rml, rmlmapperPath, tempFolderPath, name).then((out) => {
+          const end2 = new Date() - start2
+          console.info('Execution time mapping: %dms', end2)
+          const start3 = new Date()
           const data = EXPAND ? expandDepth(out) : out
           return jsonld.compact(data, JSON.parse(localContext)).then((result) => {
-            console.log(result)
+            // console.log(result)
+            const end3 = new Date() - start3
+            console.info('Execution time compacting: %dms', end3)
             return result
           })
         })
