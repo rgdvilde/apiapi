@@ -1,0 +1,201 @@
+@prefix rml: <http://semweb.mmlab.be/ns/rml#>.
+@prefix rr: <http://www.w3.org/ns/r2rml#>.
+@prefix ql: <http://semweb.mmlab.be/ns/ql#>.
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>.
+@prefix rl: <http://example.org/rules/>.
+@prefix ngsic: <https://uri.etsi.org/ngsi-ld/> .
+@prefix geojson: <https://purl.org/geojson/vocab#> .
+@prefix ngsi: <https://uri.fiware.org/ns/data-models#> .
+@prefix sdm: <https://smart-data-models.github.io/data-models/terms.jsonld#/definitions/> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+rl:BikeHireDockingStation a rr:TriplesMap;
+  rml:logicalSource [
+    rml:source "Endpoint 1";
+    rml:referenceFormulation ql:JSONPath;
+    rml:iterator "$.records[*]"
+  ];
+  rr:subjectMap [
+    rr:template "https://www.donkey.bike/{fields.station_id}" 
+  ];
+  rr:predicateObjectMap [
+    rr:predicate rdf:type;
+    rr:objectMap [
+      rr:constant ngsi:BikeHireDockingStation
+    ]
+  ];
+  rr:predicateObjectMap [
+    rr:predicate ngsic:name;
+    rr:objectMap [
+      rr:parentTriplesMap rl:name;
+      rr:joinCondition [
+        rr:child "fields.station_id";
+        rr:parent "fields.station_id"
+      ]
+    ]
+  ];
+  rr:predicateObjectMap [
+    rr:predicate ngsic:location;
+    rr:objectMap [
+      rr:parentTriplesMap rl:GeoJson;
+      rr:joinCondition [
+        rr:child "fields.lon";
+        rr:parent "lon"
+      ];
+      rr:joinCondition [
+        rr:child "fields.lat";
+        rr:parent "lat"
+      ]
+    ]
+  ].
+
+rl:name a rr:TriplesMap;
+  rml:logicalSource [
+    rml:source "Endpoint 1";
+    rml:referenceFormulation ql:JSONPath;
+    rml:iterator "$.records[*]"
+  ];
+  rr:subjectMap [
+    rr:termType rr:BlankNode
+  ];
+  rr:predicateObjectMap [
+    rr:predicate rdf:type;
+    rr:objectMap [
+      rr:constant ngsic:Property
+    ]
+  ];
+  rr:predicateObjectMap [
+    rr:predicate ngsic:hasValue;
+    rr:objectMap [
+      rml:reference "fields.name"
+    ]
+  ].
+
+rl:GeoJson a rr:TriplesMap;
+  rml:logicalSource [
+    rml:source "Endpoint 1";
+    rml:referenceFormulation ql:JSONPath;
+    rml:iterator "$.records[*].fields"
+  ];
+  rr:subjectMap [
+    rr:termType rr:BlankNode
+  ];
+  rr:predicateObjectMap [
+    rr:predicate rdf:type;
+    rr:objectMap [
+      rr:constant ngsic:GeoProperty
+    ]
+  ];
+  rr:predicateObjectMap [
+    rr:predicate ngsic:hasValue;
+    rr:objectMap [
+      rr:parentTriplesMap rl:Point;
+      rr:joinCondition [
+        rr:child "lon";
+        rr:parent "lon"
+      ];
+      rr:joinCondition [
+        rr:child "lat";
+        rr:parent "lat"
+      ]
+    ]
+  ].
+
+rl:Point a rr:TriplesMap;
+  rml:logicalSource [
+    rml:source "Endpoint 1";
+    rml:referenceFormulation ql:JSONPath;
+    rml:iterator "$.records[*].fields"
+  ];
+  rr:subjectMap [
+    rr:termType rr:BlankNode
+  ];
+  rr:predicateObjectMap [
+    rr:predicate rdf:type;
+    rr:objectMap [
+      rr:constant geojson:Point
+    ]
+  ];
+  rr:predicateObjectMap [
+    rr:predicate ngsic:coordinates;
+    rr:objectMap [
+      rml:reference "lat"
+    ];
+    rr:objectMap [
+      rml:reference "lon"
+    ]
+  ].
+
+rl:BikeHireDockingStation2 a rr:TriplesMap;
+  rml:logicalSource [
+    rml:source "Endpoint 2";
+    rml:referenceFormulation ql:JSONPath;
+    rml:iterator "$.records[*]"
+  ];
+  rr:subjectMap [
+    rr:template "https://www.donkey.bike/{fields.station_id}"
+  ];
+  rr:predicateObjectMap [
+    rr:predicate sdm:freeSlotNumber;
+    rr:objectMap [
+      rr:parentTriplesMap rl:freeSlotNumber;
+      rr:joinCondition [
+        rr:child "fields.station_id";
+        rr:parent "fields.station_id"
+      ]
+    ]
+  ];
+  rr:predicateObjectMap [
+    rr:predicate sdm:availableBikeNumber;
+    rr:objectMap [
+      rr:parentTriplesMap rl:availableBikeNumber;
+      rr:joinCondition [
+        rr:child "fields.station_id";
+        rr:parent "fields.station_id"
+      ]
+    ]
+  ].
+
+rl:availableBikeNumber a rr:TriplesMap;
+  rml:logicalSource [
+    rml:source "Endpoint 2";
+    rml:referenceFormulation ql:JSONPath;
+    rml:iterator "$.records[*]"
+  ];
+  rr:subjectMap [
+    rr:termType rr:BlankNode
+  ];
+  rr:predicateObjectMap [
+    rr:predicate rdf:type;
+    rr:objectMap [
+      rr:constant ngsic:Property
+    ]
+  ];
+  rr:predicateObjectMap [
+    rr:predicate ngsic:hasValue;
+    rr:objectMap [
+      rml:reference "fields.num_bikes_available"
+    ]
+  ].
+
+rl:freeSlotNumber a rr:TriplesMap;
+  rml:logicalSource [
+    rml:source "Endpoint 2";
+    rml:referenceFormulation ql:JSONPath;
+    rml:iterator "$.records[*]"
+  ];
+  rr:subjectMap [
+    rr:termType rr:BlankNode
+  ];
+  rr:predicateObjectMap [
+    rr:predicate rdf:type;
+    rr:objectMap [
+      rr:constant ngsic:Property
+    ]
+  ];
+  rr:predicateObjectMap [
+    rr:predicate ngsic:hasValue;
+    rr:objectMap [
+      rml:reference "fields.num_docks_available"
+    ]
+  ].

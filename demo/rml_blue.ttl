@@ -1,0 +1,215 @@
+@prefix rml: <http://semweb.mmlab.be/ns/rml#>.
+@prefix rr: <http://www.w3.org/ns/r2rml#>.
+@prefix ql: <http://semweb.mmlab.be/ns/ql#>.
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>.
+@prefix rl: <http://example.org/rules/>.
+@prefix ngsic: <https://uri.etsi.org/ngsi-ld/> .
+@prefix geojson: <https://purl.org/geojson/vocab#> .
+@prefix ngsi: <https://uri.fiware.org/ns/data-models#> .
+@prefix sdm: <https://smart-data-models.github.io/data-models/terms.jsonld#/definitions/> .
+@prefix schema: <https://schema.org/> .
+
+rl:BikeHireDockingStation a rr:TriplesMap;
+  rml:logicalSource [
+    rml:source "Endpoint 1";
+    rml:referenceFormulation ql:JSONPath;
+    rml:iterator "$.features[*]"
+  ];
+  rr:subjectMap [
+    rr:template "https://www.velo-antwerpen.be/{properties.@id}" 
+  ];
+  rr:predicateObjectMap [
+    rr:predicate rdf:type;
+    rr:objectMap [
+      rr:constant ngsi:BikeHireDockingStation
+    ]
+  ];
+  rr:predicateObjectMap [
+    rr:predicate ngsic:name;
+    rr:objectMap [
+      rr:parentTriplesMap rl:name;
+      rr:joinCondition [
+        rr:child "properties.@id";
+        rr:parent "properties.@id"
+      ]
+    ]
+  ];
+  rr:predicateObjectMap [
+    rr:predicate ngsic:location;
+    rr:objectMap [
+      rr:parentTriplesMap rl:GeoJson;
+      rr:joinCondition [
+        rr:child "properties.@id";
+        rr:parent "properties.@id"
+      ]
+    ]
+  ];
+  rr:predicateObjectMap [
+    rr:predicate sdm:availableBikeNumber;
+    rr:objectMap [
+      rr:parentTriplesMap rl:availableBikeNumber;
+      rr:joinCondition [
+        rr:child "properties.@id";
+        rr:parent "properties.@id"
+      ]
+    ]
+  ];
+  rr:predicateObjectMap [
+    rr:predicate sdm:totalSlotNumber;
+    rr:objectMap [
+      rr:parentTriplesMap rl:totalSlotNumber;
+      rr:joinCondition [
+        rr:child "properties.@id";
+        rr:parent "properties.@id"
+      ]
+    ]
+  ];
+  rr:predicateObjectMap [
+    rr:predicate sdm:freeSlotNumber;
+    rr:objectMap [
+      rr:parentTriplesMap rl:freeSlotNumber;
+      rr:joinCondition [
+        rr:child "properties.@id";
+        rr:parent "properties.@id"
+      ]
+    ]
+  ].
+
+rl:GeoJson a rr:TriplesMap;
+  rml:logicalSource [
+    rml:source "Endpoint 1";
+    rml:referenceFormulation ql:JSONPath;
+    rml:iterator "$.features[*]"
+  ];
+  rr:subjectMap [
+    rr:termType rr:BlankNode
+  ];
+  rr:predicateObjectMap [
+    rr:predicate rdf:type;
+    rr:objectMap [
+      rr:constant ngsic:GeoProperty
+    ]
+  ];
+  rr:predicateObjectMap [
+    rr:predicate ngsic:hasValue;
+    rr:objectMap [
+      rr:parentTriplesMap rl:Point;
+      rr:joinCondition [
+        rr:child "properties.@id";
+        rr:parent "properties.@id"
+      ]
+    ]
+  ].
+
+rl:Point a rr:TriplesMap;
+  rml:logicalSource [
+    rml:source "Endpoint 1";
+    rml:referenceFormulation ql:JSONPath;
+    rml:iterator "$.features[*]"
+  ];
+  rr:subjectMap [
+    rr:termType rr:BlankNode
+  ];
+  rr:predicateObjectMap [
+    rr:predicate rdf:type;
+    rr:objectMap [
+      rr:constant geojson:Point
+    ]
+  ];
+  rr:predicateObjectMap [
+    rr:predicate ngsic:coordinates;
+    rr:objectMap [
+      rml:reference "properties.latitude"
+    ];
+    rr:objectMap [
+      rml:reference "properties.longitude"
+    ]
+  ].
+
+rl:availableBikeNumber a rr:TriplesMap;
+  rml:logicalSource [
+    rml:source "Endpoint 1";
+    rml:referenceFormulation ql:JSONPath;
+    rml:iterator "$.features[*]"
+  ];
+  rr:subjectMap [
+    rr:termType rr:BlankNode
+  ];
+  rr:predicateObjectMap [
+    rr:predicate rdf:type;
+    rr:objectMap [
+      rr:constant ngsic:Property
+    ]
+  ];
+  rr:predicateObjectMap [
+    rr:predicate ngsic:hasValue;
+    rr:objectMap [
+      rml:reference "properties.bikes_available"
+    ]
+  ].
+
+rl:name a rr:TriplesMap;
+  rml:logicalSource [
+    rml:source "Endpoint 1";
+    rml:referenceFormulation ql:JSONPath;
+    rml:iterator "$.features[*]"
+  ];
+  rr:subjectMap [
+    rr:termType rr:BlankNode
+  ];
+  rr:predicateObjectMap [
+    rr:predicate rdf:type;
+    rr:objectMap [
+      rr:constant ngsic:Property
+    ]
+  ];
+  rr:predicateObjectMap [
+    rr:predicate ngsic:hasValue;
+    rr:objectMap [
+      rml:reference "properties.name"
+    ]
+  ].
+
+rl:freeSlotNumber a rr:TriplesMap;
+  rml:logicalSource [
+    rml:source "Endpoint 1";
+    rml:referenceFormulation ql:JSONPath;
+    rml:iterator "$.features[*]"
+  ];
+  rr:subjectMap [
+    rr:termType rr:BlankNode
+  ];
+  rr:predicateObjectMap [
+    rr:predicate rdf:type;
+    rr:objectMap [
+      rr:constant ngsic:Property
+    ]
+  ];
+  rr:predicateObjectMap [
+    rr:predicate ngsic:hasValue;
+    rr:objectMap [
+      rml:reference "properties.docks_available"
+    ]
+  ].
+
+rl:totalSlotNumber a rr:TriplesMap;
+  rml:logicalSource [
+    rml:source "Endpoint 1";
+    rml:referenceFormulation ql:JSONPath;
+    rml:iterator "$.features[*]"
+  ];
+  rr:subjectMap [
+    rr:termType rr:BlankNode
+  ];
+  rr:predicateObjectMap [
+    rr:predicate rdf:type;
+    rr:objectMap [
+      rr:constant ngsic:Property
+    ]
+  ];
+  rr:predicateObjectMap [
+    rr:predicate ngsic:hasValue;
+    rr:objectMap [
+      rml:reference "properties.capacity"
+    ]
+  ].

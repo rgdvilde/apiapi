@@ -1,0 +1,285 @@
+@prefix rml: <http://semweb.mmlab.be/ns/rml#>.
+@prefix rr: <http://www.w3.org/ns/r2rml#>.
+@prefix ql: <http://semweb.mmlab.be/ns/ql#>.
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>.
+@prefix rl: <http://example.org/rules/>.
+@prefix ngsic: <https://uri.etsi.org/ngsi-ld/> .
+@prefix geojson: <https://purl.org/geojson/vocab#> .
+@prefix ngsi: <https://uri.fiware.org/ns/data-models#> .
+@prefix sdm: <https://smart-data-models.github.io/data-models/terms.jsonld#/definitions/> .
+@prefix schema: <https://schema.org/> .
+
+rl:BikeHireDockingStation a rr:TriplesMap;
+  rml:logicalSource [
+    rml:source "Endpoint 1";
+    rml:referenceFormulation ql:JSONPath;
+    rml:iterator "*"
+  ];
+  rr:subjectMap [
+    rr:template "https://www.velo-antwerpen.be/{id}" 
+  ];
+  rr:predicateObjectMap [
+    rr:predicate rdf:type;
+    rr:objectMap [
+      rr:constant ngsi:BikeHireDockingStation
+    ]
+  ];
+  rr:predicateObjectMap [
+    rr:predicate ngsic:name;
+    rr:objectMap [
+      rr:parentTriplesMap rl:name;
+      rr:joinCondition [
+        rr:child "id";
+        rr:parent "id"
+      ]
+    ]
+  ];
+  rr:predicateObjectMap [
+    rr:predicate ngsic:location;
+    rr:objectMap [
+      rr:parentTriplesMap rl:GeoJson;
+      rr:joinCondition [
+        rr:child "id";
+        rr:parent "id"
+      ]
+    ]
+  ];
+  rr:predicateObjectMap [
+    rr:predicate schema:address;
+    rr:objectMap [
+      rr:parentTriplesMap rl:address;
+      rr:joinCondition [
+        rr:child "id";
+        rr:parent "id"
+      ]
+    ]
+  ];
+  rr:predicateObjectMap [
+    rr:predicate sdm:availableBikeNumber;
+    rr:objectMap [
+      rr:parentTriplesMap rl:availableBikeNumber;
+      rr:joinCondition [
+        rr:child "id";
+        rr:parent "id"
+      ]
+    ]
+  ];
+  rr:predicateObjectMap [
+    rr:predicate schema:areaServed;
+    rr:objectMap [
+      rr:parentTriplesMap rl:areaServed;
+      rr:joinCondition [
+        rr:child "id";
+        rr:parent "id"
+      ]
+    ]
+  ];
+  rr:predicateObjectMap [
+    rr:predicate sdm:freeSlotNumber;
+    rr:objectMap [
+      rr:parentTriplesMap rl:freeSlotNumber;
+      rr:joinCondition [
+        rr:child "id";
+        rr:parent "id"
+      ]
+    ]
+  ].
+
+rl:GeoJson a rr:TriplesMap;
+  rml:logicalSource [
+    rml:source "Endpoint 1";
+    rml:referenceFormulation ql:JSONPath;
+    rml:iterator "*"
+  ];
+  rr:subjectMap [
+    rr:termType rr:BlankNode
+  ];
+  rr:predicateObjectMap [
+    rr:predicate rdf:type;
+    rr:objectMap [
+      rr:constant ngsic:GeoProperty
+    ]
+  ];
+  rr:predicateObjectMap [
+    rr:predicate ngsic:hasValue;
+    rr:objectMap [
+      rr:parentTriplesMap rl:Point;
+      rr:joinCondition [
+        rr:child "id";
+        rr:parent "id"
+      ]
+    ]
+  ].
+
+rl:Point a rr:TriplesMap;
+  rml:logicalSource [
+    rml:source "Endpoint 1";
+    rml:referenceFormulation ql:JSONPath;
+    rml:iterator "*"
+  ];
+  rr:subjectMap [
+    rr:termType rr:BlankNode
+  ];
+  rr:predicateObjectMap [
+    rr:predicate rdf:type;
+    rr:objectMap [
+      rr:constant geojson:Point
+    ]
+  ];
+  rr:predicateObjectMap [
+    rr:predicate ngsic:coordinates;
+    rr:objectMap [
+      rml:reference "location.value.coordinates[0]"
+    ];
+    rr:objectMap [
+      rml:reference "location.value.coordinates[1]"
+    ]
+  ].
+
+rl:address a rr:TriplesMap;
+  rml:logicalSource [
+    rml:source "Endpoint 1";
+    rml:referenceFormulation ql:JSONPath;
+    rml:iterator "*"
+  ];
+  rr:subjectMap [
+    rr:termType rr:BlankNode
+  ];
+  rr:predicateObjectMap [
+    rr:predicate rdf:type;
+    rr:objectMap [
+      rr:constant ngsic:Property
+    ]
+  ];
+  rr:predicateObjectMap [
+    rr:predicate ngsic:hasValue;
+    rr:objectMap [
+      rr:parentTriplesMap rl:addressvalue;
+      rr:joinCondition [
+        rr:child "id";
+        rr:parent "id"
+      ]
+    ]
+  ].
+
+rl:addressvalue a rr:TriplesMap;
+  rml:logicalSource [
+    rml:source "Endpoint 1";
+    rml:referenceFormulation ql:JSONPath;
+    rml:iterator "*"
+  ];
+  rr:subjectMap [
+    rr:termType rr:BlankNode
+  ];
+  rr:predicateObjectMap [
+    rr:predicate rdf:type;
+    rr:objectMap [
+      rr:constant schema:PostalAddress;
+    ]
+  ];
+  rr:predicateObjectMap [
+    rr:predicate schema:streetAddress;
+    rr:objectMap [
+      rml:reference "address.value.streetAddress"
+    ]
+  ];
+  rr:predicateObjectMap [
+    rr:predicate schema:addressCountry;
+    rr:objectMap [
+      rml:reference "address.value.addressCountry"
+    ]
+  ];
+  rr:predicateObjectMap [
+    rr:predicate schema:postalCode;
+    rr:objectMap [
+      rml:reference "address.value.postalCode"
+    ]
+  ].
+
+rl:name a rr:TriplesMap;
+  rml:logicalSource [
+    rml:source "Endpoint 1";
+    rml:referenceFormulation ql:JSONPath;
+    rml:iterator "*"
+  ];
+  rr:subjectMap [
+    rr:termType rr:BlankNode
+  ];
+  rr:predicateObjectMap [
+    rr:predicate rdf:type;
+    rr:objectMap [
+      rr:constant ngsic:Property
+    ]
+  ];
+  rr:predicateObjectMap [
+    rr:predicate ngsic:hasValue;
+    rr:objectMap [
+      rml:reference "name.value"
+    ]
+  ].
+
+rl:availableBikeNumber a rr:TriplesMap;
+  rml:logicalSource [
+    rml:source "Endpoint 1";
+    rml:referenceFormulation ql:JSONPath;
+    rml:iterator "*"
+  ];
+  rr:subjectMap [
+    rr:termType rr:BlankNode
+  ];
+  rr:predicateObjectMap [
+    rr:predicate rdf:type;
+    rr:objectMap [
+      rr:constant ngsic:Property
+    ]
+  ];
+  rr:predicateObjectMap [
+    rr:predicate ngsic:hasValue;
+    rr:objectMap [
+      rml:reference "availableBikeNumber.value"
+    ]
+  ].
+
+  rl:freeSlotNumber a rr:TriplesMap;
+  rml:logicalSource [
+    rml:source "Endpoint 1";
+    rml:referenceFormulation ql:JSONPath;
+    rml:iterator "*"
+  ];
+  rr:subjectMap [
+    rr:termType rr:BlankNode
+  ];
+  rr:predicateObjectMap [
+    rr:predicate rdf:type;
+    rr:objectMap [
+      rr:constant ngsic:Property
+    ]
+  ];
+  rr:predicateObjectMap [
+    rr:predicate ngsic:hasValue;
+    rr:objectMap [
+      rml:reference "freeSlotNumber.value"
+    ]
+  ].
+
+  rl:areaServed a rr:TriplesMap;
+  rml:logicalSource [
+    rml:source "Endpoint 1";
+    rml:referenceFormulation ql:JSONPath;
+    rml:iterator "*"
+  ];
+  rr:subjectMap [
+    rr:termType rr:BlankNode
+  ];
+  rr:predicateObjectMap [
+    rr:predicate rdf:type;
+    rr:objectMap [
+      rr:constant ngsic:Property
+    ]
+  ];
+  rr:predicateObjectMap [
+    rr:predicate ngsic:hasValue;
+    rr:objectMap [
+      rml:reference "areaServed.value"
+    ]
+  ].
