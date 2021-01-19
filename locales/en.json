@@ -78,5 +78,15 @@
   },
   "uploads": {
     "add": "Upload a file"
+  },
+  "titles": {
+    "RMLviaText": "RML via Text",
+    "YARRRMLviaText": "YARRRML via Text",
+    "RMLviaForm": "RML via Form"    
+  },
+  "info": {
+    "RMLviaText": "Input an RML mapping via text",
+    "YARRRMLviaText": "Input an YARRRML mapping via text",
+    "RMLviaForm": "Create an RML mapping via form"
   }
 }

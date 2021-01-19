@@ -139,29 +139,17 @@
                   <v-row>
                     <v-col>
                       <v-card @click="setMapMode('RML')">
-                        <v-img
-                          lazy-src="https://picsum.photos/150/150"
-                          max-height="150"
-                          max-width="150"
-                          src="https://picsum.photos/150/150" />
+                        RML via text
                       </v-card>
                     </v-col>
                     <v-col>
                       <v-card @click="setMapMode('YARRRML')">
-                        <v-img
-                          lazy-src="https://picsum.photos/150/150"
-                          max-height="150"
-                          max-width="150"
-                          src="https://picsum.photos/150/150" />
+                        YARRRML via text
                       </v-card>
                     </v-col>
                     <v-col>
                       <v-card @click="setMapMode('RMLMapper')">
-                        <v-img
-                          lazy-src="https://picsum.photos/150/150"
-                          max-height="150"
-                          max-width="150"
-                          src="https://picsum.photos/150/150" />
+                        RML via form
                       </v-card>
                     </v-col>
                   </v-row>
@@ -219,7 +207,7 @@
                 </v-card-title>
 
                 <v-card-text>
-                  <pre>{{this.collection.model.shacl}}</pre>
+                  <pre>{{ this.collection.model.shacl }}</pre>
                 </v-card-text>
 
                 <v-divider />
@@ -239,6 +227,34 @@
           <yarrrml-editor
             v-if="mapMode === 'YARRRML'"
             @complete="setYARRRML" />
+          <v-card v-if="mapMode !== 'RML' && mapMode != 'YARRRML' && mapMode != 'RMLMapper' ">
+            <v-card-title class="headline grey lighten-2">
+              Mapping
+            </v-card-title>
+
+            <v-card-text>
+              <v-row>
+                <v-col>
+                  <v-card @click="setMapMode('RML')">
+                    <b>{{ $t('titles.RMLviaText') }}</b>
+                    <p>{{ $t('info.RMLviaText') }}</p>
+                  </v-card>
+                </v-col>
+                <v-col>
+                  <v-card @click="setMapMode('YARRRML')">
+                    <b>{{ $t('titles.YARRRMLviaText') }}</b>
+                    <p>{{ $t('info.YARRRMLviaText') }}</p>
+                  </v-card>
+                </v-col>
+                <v-col>
+                  <v-card @click="setMapMode('RMLMapper')">
+                    <b>{{ $t('titles.RMLviaForm') }}</b>
+                    <p>{{ $t('info.RMLviaForm') }}</p>
+                  </v-card>
+                </v-col>
+              </v-row>
+            </v-card-text>
+          </v-card>
         </v-expansion-panel-content>
       </v-expansion-panel>
     </v-expansion-panels>
