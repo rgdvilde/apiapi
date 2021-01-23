@@ -57,7 +57,7 @@
                   <v-row>
                     <v-col
                       cols="6">
-                      Sample Rate (seconds)
+                      Sample rate (seconds)
                     </v-col>
                     <v-col
                       cols="12">
@@ -82,7 +82,23 @@
                   <v-row>
                     <v-col
                       cols="6">
-                      Cache Time (seconds)
+                      Local cache time (seconds)
+                    </v-col>
+                    <v-col
+                      cols="12">
+                      <v-text-field
+                        v-model="localCacheTime"
+                        class="mt-0 pt-0"
+                        hide-details
+                        single-line
+                        type="number"
+                        style="width: 60px" />
+                    </v-col>
+                  </v-row>
+                  <v-row>
+                    <v-col
+                      cols="6">
+                      Max cache age in response (seconds)
                     </v-col>
                     <v-col
                       cols="12">
@@ -169,6 +185,7 @@ export default {
       id: this.$route.params.collection,
       sampleRate: 300,
       maxCacheAge: 300,
+      localCacheTime: 300,
       started: false,
       dialog: false,
       created: false
@@ -201,7 +218,8 @@ export default {
       this.started = true
       const samplePayload = JSON.stringify({
         'sampleRate': this.sampleRate,
-        'maxCacheAge': this.maxCacheAge
+        'maxCacheAge': this.maxCacheAge,
+        'localCacheTime': this.localCacheTime
       })
       fetch(`${process.env.baseUrl}/api/collection/${this.collection._id}/update`, {
         method: 'PUT',
@@ -245,6 +263,7 @@ export default {
       this.created = false
       this.sampleRate = 300
       this.maxCacheAge = 300
+      this.localCacheTime = 300
       const payload = JSON.stringify({
         'collectionId': this.collection._id
       })

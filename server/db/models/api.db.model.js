@@ -279,12 +279,17 @@ ApiSchema.methods.getStream = async function getApiStream (collection, model, r)
               }
             })[0].basePath
             // console.log(basePath)
-            const currentList = jp.query(sourceDict[key][urlDict[url]], basePath)[0]
+            const currentList = basePath && basePath != '' ? jp.query(sourceDict[key][urlDict[url]], basePath)[0] : sourceDict[key][urlDict[url]]
             currentList.push(JSON.parse(content))
             // console.log(jp.query(sourceDict[key][urlDict[url]], basePath))
             // console.log(currentList)
             // console.log(JSON.parse(content))
-            jp.value(sourceDict[key][urlDict[url]], basePath, currentList)
+            if (basePath && basePath != '') {
+              jp.value(sourceDict[key][urlDict[url]], basePath, currentList)
+            } else {
+              sourceDict[key][urlDict[url]] = currentList
+            }
+
             // console.log(sourceDict[key][urlDict[url]])
           }
         })
@@ -365,6 +370,8 @@ const mapRMLsplit = (sourceDict, rml, rmlmapperPath, tempFolderPath, name, urls)
     // console.log(sources)
     return mapRML(sources, rml, rmlmapperPath, tempFolderPath, name).then((out) => {
       relabelBlankNodes(out, key)
+      console.log(out)
+      console.log(rml)
       return out
     })
   }))
@@ -398,7 +405,12 @@ ApiSchema.methods.invokeStream = function invokeApiStream (model) {
     newChangeHash = changeHash
   }
   const promArray = endpoints.map((endpoint) => {
-    return axios.get(endpoint.url)
+    const { url, req_params } = endpoint
+    const transformedparams = {}
+    req_params.forEach((param) => {
+      transformedparams[param.key] = param.value
+    })
+    return axios.get(url, { params: transformedparams })
   })
   return Promise.all(promArray)
     .then((values) => {
@@ -583,9 +595,14 @@ ApiSchema.methods.invoke = function invokeApi (model) {
     //   return JSON.parse(cachedResponse)
     // }
     const start = new Date()
-    const promArray = this.endpoints.map((endpoint) => {
-      const client = new HttpService(endpoint.url)
-      return client.get()
+    const { endpoints } = this
+    const promArray = endpoints.map((endpoint) => {
+      const { url, req_params } = endpoint
+      const transformedparams = {}
+      req_params.forEach((param) => {
+        transformedparams[param.key] = param.value
+      })
+      return axios.get(url, { params: transformedparams })
     })
     return Promise.all(promArray).then((values) => {
       let ind = 0

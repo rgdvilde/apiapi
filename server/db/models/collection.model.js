@@ -39,6 +39,11 @@ const CollectionSchema = mongoose.Schema({
     required: false,
     default: 300
   },
+  localCacheTime: {
+    type: Number,
+    required: false,
+    default: 300
+  },
   apis: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Api' }],
   uploads: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Upload' }],
   model: {
@@ -124,6 +129,9 @@ CollectionSchema.methods.getApiStreams = async function getCollectionApiStreams 
             }
           }
           // console.log('the page number is:' + page)
+          // console.log(this._id)
+          // console.log(page * PAGESIZE)
+          // console.log((page + 1) * PAGESIZE)
           return Queries.q_getFragmentIds(this._id, page * PAGESIZE, (page + 1) * PAGESIZE, x, y, z).then((result) => {
             records.push(result)
             result = result.map((r) => { return '' + r._id })
@@ -159,6 +167,7 @@ CollectionSchema.methods.getApiStreams = async function getCollectionApiStreams 
         .then((model) => {
           const allData = flattenDepth(results, 2)
           const start2 = new Date()
+          console.log(records)
           return constructMeta(this, model, records, page, x, y, z).then((meta) => {
             // console.log('dit zijn de ids van alle data')
             // console.log(allData)
@@ -173,7 +182,7 @@ CollectionSchema.methods.getApiStreams = async function getCollectionApiStreams 
               // console.log(pageUrl)
               const end2 = new Date() - start2
               console.info('Execution time tranform: %dms', end2)
-              RedisService.setData(pageUrl, JSON.stringify(transformedStream), this.maxCacheAge)
+              RedisService.setData(pageUrl, JSON.stringify(transformedStream), this.localCacheTime)
               return {
                 transformedStream,
                 maxCacheAge
@@ -228,11 +237,13 @@ const constructMeta = (collection, model, data, page, x, y, z) => {
   }
 
   const timeMM = []
+  // error here probably has to do with the page being out of bounds or no records being fetched
   // console.log('dit zijn de records van alle data samen')
   // console.log(data)
   data = data[0]
   data.forEach((r) => {
     const { id, contents, batch } = r
+    console.log(batch)
     if (!timeMM[0]) {
       timeMM[0] = batch
       timeMM[1] = batch
@@ -244,8 +255,8 @@ const constructMeta = (collection, model, data, page, x, y, z) => {
       timeMM[1] = batch
     }
   })
-  // console.log('dit is de time dict')
-  // console.log(timeMM)
+  console.log('dit is de time dict')
+  console.log(timeMM)
   const pagePromise = new Promise((resolve, reject) => {
     const calcPageCount = (page, size, total) => {
       const before = page * size

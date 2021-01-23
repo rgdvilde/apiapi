@@ -31,6 +31,7 @@ module.exports = {
           ApiModel.findById(apiId).then((res) => {
             res.invokeStream().then((res) => {
               const { changeHash, changedObjectsArray } = res
+              console.log('there are ' + changedObjectsArray.length + ' new records')
               const records = changedObjectsArray.map((record) => {
                 return new RecordModel(record)
               })

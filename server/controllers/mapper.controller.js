@@ -59,21 +59,23 @@ module.exports = {
     if (mapmode === 'rml') {
       console.log('validating rml')
       // console.log(req)
-      console.log(endpoints)
-      console.log(sources)
-      console.log(rml)
+      // console.log(endpoints)
+      // console.log(sources)
+      // console.log(rml)
       const wrapper = new RMLMapperWrapper(rmlmapperPath, tempFolderPath, true)
       return wrapper.execute(rml, { sources, generateMetadata: false, serialization: 'jsonld' }).then((resp) => {
         const validator = new SHACLValidator()
+        // console.log(resp)
+        // console.log(shapes)
         validator.validate(resp.output, 'application/ld+json', shapes, 'text/turtle', function (e, report) {
-          console.log('Conforms? ' + report.conforms())
+          // console.log('Conforms? ' + report.conforms())
           if (report.conforms() === false) {
             report.results().forEach(function (result) {
-              console.log(' - Severity: ' + result.severity() + ' for ' + result.sourceConstraintComponent())
+              // console.log(' - Severity: ' + result.severity() + ' for ' + result.sourceConstraintComponent())
             })
             res.json(report.results())
           } else {
-            console.log(report.conforms())
+            // console.log(report.conforms())
             res.json(report.conforms())
           }
         })

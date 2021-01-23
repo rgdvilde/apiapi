@@ -39,11 +39,14 @@
           v-if="toggleEndpoint"
           cols="12"
           md="5">
-          <vue-json-pretty
+          <v-text-field
+            v-model="number"
+            label="Number of elements" />
+          <pre>{{ JSON.stringify(tempJSON, null, 2) }}</pre>
+          <!--           <vue-json-pretty
             :path="'res'"
-            :data="endpointData" />
+            :data="tempJSON" /> -->
         </v-col>
-        <hr>
         <v-col
           cols="12"
           md="5">
@@ -96,17 +99,17 @@
 
 <script>
 import * as $rdf from 'rdflib'
+import * as jp from 'jsonpath'
 import SHACLValidator from 'shacl'
-import VueJsonPretty from 'vue-json-pretty'
+// import VueJsonPretty from 'vue-json-pretty'
 import ShaclForm from './ShaclForm'
-import 'vue-json-pretty/lib/styles.css'
+// import 'vue-json-pretty/lib/styles.css'
 import defaultOptions from './lib/options'
 
 export default {
   name: 'ShaclMapper',
   components: {
-    ShaclForm,
-    VueJsonPretty
+    ShaclForm
   },
   props: {
     shapesGraphText: {
@@ -120,7 +123,7 @@ export default {
       }
     },
     endpointData: {
-      type: Object,
+      type: Array,
       default () {
         return {}
       }
@@ -132,7 +135,7 @@ export default {
       mergedOptions: defaultOptions,
       targetClass: '',
       dataText: '',
-      iteratorText: '$',
+      iteratorText: '*',
       filetype: 'json',
       shapesGraph: $rdf.graph(),
       targetShapes: [],
@@ -141,7 +144,28 @@ export default {
       toggleEndpoint: true,
       filetypes: ['json'],
       tab: 'form',
-      validator: new SHACLValidator()
+      validator: new SHACLValidator(),
+      number: 5
+    }
+  },
+  computed: {
+    tempJSON () {
+      let pathJson = []
+      try {
+        pathJson = jp.query(this.endpointData, this.iteratorText)
+      } catch {
+        pathJson = this.endpointData
+      }
+      const resp = []
+      if (pathJson && pathJson.length > 1) {
+        pathJson.forEach((j) => {
+          if (resp.length >= this.number) { return }
+          resp.push(j)
+        })
+      } else {
+        return pathJson
+      }
+      return resp
     }
   },
   mounted () {

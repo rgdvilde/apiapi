@@ -50,11 +50,11 @@ export default {
   },
   computed: {
     propertyConstraints () {
-      const co = this.shape.constraints.filter((cons) => {
-        return cons.component.node.equals(SHACL('PropertyConstraintComponent'))
-      })
-      console.log(this.shape.constraints)
-      console.log(co)
+      // const co = this.shape.constraints.filter((cons) => {
+      //   return cons.component.node.equals(SHACL('PropertyConstraintComponent'))
+      // })
+      // .consolelog(this.shape.constraints)
+      // console.log(co)
       return this.shape.constraints.filter((cons) => {
         return cons.component.node.equals(SHACL('PropertyConstraintComponent'))
       })

@@ -14,11 +14,12 @@
     </v-tabs>
     <v-tabs-items v-model="tab">
       <v-tab-item
-        v-for="(name) in cards"
+        v-for="(name,index) in cards"
         :key="name.name">
         <v-card flat>
           <endpoint-card
             :text="name"
+            :endpointData="endpointData[index]"
             @update="update" />
           <v-btn
             @click="removeEndpoint">
@@ -36,19 +37,37 @@ export default {
   components: {
     EndpointCard
   },
-  props: {},
+  props: {
+    endpointInformation: {
+      type: Array,
+      default () {
+        return []
+      }
+    }
+  },
   data () {
     return {
       tab: null,
-      cards: [{ name: 'Endpoint 1' }],
+      cards: [{ name: 'Endpoint 1', data: '{}' }],
       endpoints: [{}],
       edit: null
+    }
+  },
+  computed: {
+    endpointData () {
+      const { endpointInformation } = this
+      const endpointD = []
+      endpointInformation.forEach((t) => {
+        endpointD.push(t.data)
+      })
+      return endpointD
     }
   },
   methods: {
     addEndpoint () {
       this.cards.push({
-        name: 'Endpoint ' + (this.cards.length + 1)
+        name: 'Endpoint ' + (this.cards.length + 1),
+        data: ''
       })
       this.endpoints.push({})
       this.$emit('update', this.endpoints)
@@ -62,6 +81,7 @@ export default {
       this.$emit('update', this.endpoints)
     },
     update (endpoint) {
+      console.log(this.endpointInformation)
       const { tab, endpoints } = this
       endpoints[tab] = endpoint
       this.$emit('update', this.endpoints)

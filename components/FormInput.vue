@@ -1,68 +1,56 @@
 <template>
-  <div :class="options.styles.field">
-    <div :class="options.styles.label">
+  <div>
+    <v-row>
       <abbr :title="propertyShape.path.value">
         {{ shrink(propertyShape.path) }}
       </abbr>
-      <br>
-      <v-switch
-        v-model="constant"
-        :label="`constant`" />
       <v-btn
         v-if="isAddable"
-        @click.prevent="add"
-        elevation="2">
-        Add
+        @click="add"
+        icon>
+        <v-icon>mdi-plus</v-icon>
       </v-btn>
-      <v-btn
-        v-if="isAddable"
-        @click.prevent="expand"
-        elevation="2">
-        Expand
-      </v-btn>
-    </div>
-    <div
-      v-if="!expanded.expanded"
-      :class="options.styles.inputColumn">
-      <div
-        v-for="(val, ind) in inputValue"
-        :key="ind"
-        :class="options.styles.inputGroup">
-        <typed-input
-          :constant="constant"
-          :constraints="constraintParams"
-          :is-valid="isValid(ind)"
-          v-model="inputValue[ind]"
-          @input="onInput" />
-        <v-btn
-          v-if="isRemovable"
-          @click.prevent="remove(ind)"
-          elevation="2">
-          x
-        </v-btn>
-      </div>
-    </div>
-    <div
-      v-else
-      :class="options.styles.inputColumn">
-      <shacl-form
-        ref="shaclForm"
-        :shapes-graph-text="shapesGraphText"
-        :target-class="targetClass"
-        :options="options"
-        :endpoint-data="endpointdata"
-        :iterator-text="iteratorText"
-        :filetype="filetype"
-        @update="onUpdate"
-        @load="onLoad" />
-    </div>
+    </v-row>
+    <v-row>
+      <v-col
+        cols="4" />
+      <v-col cols="10">
+        <div
+          v-for="(val, ind) in inputValue"
+          :key="ind"
+          :class="options.styles.inputGroup">
+          <v-row>
+            <v-col cols="3">
+              <v-switch
+                v-model="constant"
+                :label="`constant`" />
+            </v-col>
+            <v-col cols="7">
+              <typed-input
+                :constant="constant"
+                :constraints="constraintParams"
+                :is-valid="isValid(ind)"
+                v-model="inputValue[ind]"
+                @input="onInput" />
+            </v-col>
+            <v-col>
+              <v-btn
+                v-if="isRemovable"
+                @click="inputValue.splice(ind,1)"
+                icon>
+                <v-icon>mdi-close</v-icon>
+              </v-btn>
+            </v-col>
+          </v-row>
+        </div>
+      </v-col>
+    </v-row>
   </div>
 </template>
 
 <script>
 import * as $rdf from 'rdflib'
 import TypedInput from './TypedInput.vue'
-import ShaclForm from './ShaclForm.vue'
 // import queries from '../lib/queries'
 
 import { shrinkUri } from './lib/util'
@@ -72,8 +60,7 @@ const SHACL = new $rdf.Namespace('http://www.w3.org/ns/shacl#')
 export default {
   name: 'FormInput',
   components: {
-    TypedInput,
-    ShaclForm
+    TypedInput
   },
   props: {
     propertyShapeNode: {
@@ -122,9 +109,6 @@ export default {
   ],
   computed: {
     propertyShape () {
-      console.log(this.shapesGraph)
-      console.log(this.propertyShapeNode)
-      console.log(this.shapesGraph.getShape(this.propertyShapeNode))
       return this.shapesGraph.getShape(this.propertyShapeNode)
     },
     constraints () {
@@ -162,6 +146,7 @@ export default {
       })
     },
     quads () {
+      console.log(this.propertyShape)
       const objects = this.objects()
       if (objects.length === 0) { return null }
 
@@ -235,7 +220,11 @@ export default {
       }
     },
     remove (index) {
+      // console.log('index')
+      // console.log(index)
+      // console.log(this.inputValue)
       if (this.isBlankNode) {
+        // console.log('blank')
         this.blankNode.splice(index, 1)
         this.quadsUnderBlankNode.splice(index, 1)
         if (this.blankNode.length === 0) { this.add() }
@@ -287,7 +276,7 @@ export default {
       //  }
       // this.shapesStore.query(eq,onresult,undefined,onDone)
       // // this.expanded.expanded = !this.expanded.expanded
-      console.log(this.propertyShape)
+      // console.log(this.propertyShape)
     }
   }
 }

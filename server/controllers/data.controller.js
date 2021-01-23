@@ -23,6 +23,7 @@ module.exports = {
     // console.log('params in req')
     // console.log(collectionId, x, y, z, page, unixtime)
     CollectionModel.findById(collectionId).then((doc) => {
+      // console.log(doc)
       doc.getApiStreams(x, y, z, page, unixtime).then((result) => {
         const { transformedStream, maxCacheAge } = result
         res.set('Cache-control', 'max-age=' + maxCacheAge)

@@ -1,27 +1,25 @@
 <template>
   <div>
-    <v-form>
-      <v-container>
-        <v-row>
-          <v-text-field
-            v-model="subjectUri"
-            label="Subject URI" />
-        </v-row>
-        <v-row>
-          <v-text-field
-            v-model="subjectTemplate"
-            @input="onUpdate"
-            label="Subject Template" />
-        </v-row>
-      </v-container>
-      <form-group
-        :subject="subject"
-        :shape="shape"
-        :shapes-store="shapesStore"
-        v-if="shape"
-        v-model="quads"
-        @input="onUpdate" />
-    </v-form>
+    <v-container>
+      <v-row>
+        <v-text-field
+          v-model="subjectUri"
+          label="Subject URI" />
+      </v-row>
+      <v-row>
+        <v-text-field
+          v-model="subjectTemplate"
+          @input="onUpdate"
+          label="Subject Template" />
+      </v-row>
+    </v-container>
+    <form-group
+      :subject="subject"
+      :shape="shape"
+      :shapes-store="shapesStore"
+      v-if="shape"
+      v-model="quads"
+      @input="onUpdate" />
   </div>
 </template>
 
@@ -115,6 +113,17 @@ export default {
     keys () {
       return Object.keys(this.endpointData)
     },
+    actualTargetClass () {
+      if (!this.targetClass) {
+        return null
+      }
+      const mimeType = 'text/turtle'
+      const SHACL = $rdf.Namespace('http://www.w3.org/ns/shacl#')
+      const store = $rdf.graph()
+      $rdf.parse(this.shapesGraphText, store, this.targetClass, mimeType)
+      const friend = store.any($rdf.sym(this.targetClass), SHACL('targetClass'), undefined)
+      return friend ? friend.value : this.targetClass
+    },
     defaultHeaders () {
       const r = []
       const blankNode4 = $rdf.blankNode()
@@ -122,7 +131,7 @@ export default {
       const blankNode6 = $rdf.blankNode()
       const blankNode8 = $rdf.blankNode()
       r.push($rdf.quad(this.subject, RML('logicalSource'), blankNode4))
-      r.push($rdf.quad(blankNode4, RML('source'), $rdf.literal('data.json')))
+      r.push($rdf.quad(blankNode4, RML('source'), $rdf.literal('Endpoint 1')))
       switch (this.filetype) {
         case 'json':
           r.push($rdf.quad(blankNode4, RML('referenceFormulation'), QL('JSONPath')))
@@ -136,7 +145,7 @@ export default {
       r.push($rdf.quad(this.subject, RR('predicateObjectMap'), blankNode6))
       r.push($rdf.quad(blankNode6, RR('predicate'), RDF('type')))
       r.push($rdf.quad(blankNode6, RR('objectMap'), blankNode8))
-      r.push($rdf.quad(blankNode8, RR('constant'), this.targetClass))
+      r.push($rdf.quad(blankNode8, RR('constant'), $rdf.sym(this.actualTargetClass)))
       return r
     },
     shapesStore () {

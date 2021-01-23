@@ -43,7 +43,7 @@
       <v-expansion-panel>
         <v-expansion-panel-header>
           <div>
-            <v-icon>mdi-text-box-outline</v-icon>
+            <v-icon>mdi-sitemap</v-icon>
             Endpoints
             <v-dialog
               v-model="d_endpointInfo"
@@ -84,13 +84,14 @@
         <v-expansion-panel-content>
           <endpoint-cards
             @update="updateEndpointCards"
-            @validated="validate" />
+            @validated="validate"
+            :endpointInformation="endpoints" />
         </v-expansion-panel-content>
       </v-expansion-panel>
       <v-expansion-panel :disabled="!next_step">
         <v-expansion-panel-header>
           <div>
-            <v-icon>mdi-text-box-outline</v-icon>
+            <v-icon>mdi-translate</v-icon>
             Mapping
             <v-dialog
               v-model="d_mappingInfo"
@@ -299,7 +300,7 @@ export default {
     return {
       valid: true,
       nameRules: [v => !!v || 'Name is required'],
-      name: 'Donkey Republic bike sharing',
+      name: '',
       urlRules: [v => !!v || 'Url is required'],
       authMethodItems: [
         { text: 'Open', value: 'open' },
@@ -329,6 +330,7 @@ export default {
       d_mappingInfo: false,
       d_endpointInfo: false,
       d_mappingSelect: false,
+      d_shaclView: false,
       constraintsValidated: false,
       d_mapValidation: false,
       endpointResp: {}
@@ -406,7 +408,8 @@ export default {
           recordId: card.recordId,
           lat: card.lat ? card.lat : '',
           lon: card.lon ? card.lon : '',
-          req_params: card.req_params ? card.req_params : []
+          req_params: card.req_params ? card.req_params : [],
+          data: card.data
         }
       })
       this.urls = []
@@ -447,6 +450,7 @@ export default {
           console.log('endpoint')
           const { req_params: reqParams, url } = endpoint
           const transformedparams = {}
+          // {key: param_key, value: param.value}
           reqParams.forEach((param) => {
             transformedparams[param.key] = param.value
           })
