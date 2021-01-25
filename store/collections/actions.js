@@ -4,6 +4,7 @@ import { actionTypes, mutationTypes } from './types'
 export default {
   async [actionTypes.FETCH_ALL] ({ commit }) {
     try {
+      console.log(process.env.baseUrl)
       const url = `${process.env.baseUrl}/api/collection`
       const response = await fetch(url)
       const collections = await response.json()

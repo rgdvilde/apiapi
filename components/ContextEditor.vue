@@ -4,7 +4,7 @@
       <v-col>
         <v-card
           elevation="2">
-          <v-card-title>Root context</v-card-title>
+          <v-card-title>Fragment Context</v-card-title>
           <vue-json-editor
             v-model="globalContext"
             :style="btnStyles"
@@ -18,7 +18,7 @@
       <v-col>
         <v-card
           elevation="2">
-          <v-card-title>Data point context</v-card-title>
+          <v-card-title>Data Point Context</v-card-title>
           <v-card-text>
             <vue-json-editor
               v-model="localContext"

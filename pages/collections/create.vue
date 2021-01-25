@@ -14,6 +14,8 @@
               <v-textarea v-model="collection_description"
                           outlined label="description"
                           class="mt-5" />
+              <v-text-field v-model="pageSize"
+                            required label="data points per page" />
               <v-select :items="models"
                         v-model="selected_model"
                         item-text="name"
@@ -74,7 +76,8 @@ export default {
       return {
         name: this.collection_name,
         description: this.collection_description,
-        model: this.selected_model
+        model: this.selected_model,
+        pageSize: this.pageSize
       }
     },
     ...mapGetters('models', { models: modelGetters.ALL_MODELS })

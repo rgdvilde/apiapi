@@ -24,7 +24,7 @@
                 </v-card-title>
 
                 <v-card-text>
-                  Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+                  Provide the name and a description for the Model.
                 </v-card-text>
 
                 <v-divider />
@@ -70,7 +70,7 @@
                 </v-card-title>
 
                 <v-card-text>
-                  Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+                  Provide the SHACL file which contains the Model constraints. One SHACL file can consist of multiple shapes.
                 </v-card-text>
 
                 <v-divider />
@@ -106,11 +106,11 @@
 
               <v-card>
                 <v-card-title class="headline grey lighten-2">
-                  Event Stream Context
+                  Context
                 </v-card-title>
 
                 <v-card-text>
-                  Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+                  Provide the additional context for the mapping. The <b>Fragment Context</b> will be added to the root of an event stream fragment. The <b>Data Point Context</b> will be added to each data point of the fragment and will be used to compact the data. Additionally the <b>Data Point Context</b> is used to compact the mapped data dump.
                 </v-card-text>
 
                 <v-divider />
@@ -150,7 +150,7 @@
                 </v-card-title>
 
                 <v-card-text>
-                  Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+                  Provide the <b>SHACL paths</b> to the longitude and latitude properties in the shape. These will be used to generate the paths present in the event stream TREE specification footer. Space is used to as separation character.
                 </v-card-text>
 
                 <v-divider />

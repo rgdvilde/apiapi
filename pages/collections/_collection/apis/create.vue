@@ -24,7 +24,7 @@
                 </v-card-title>
 
                 <v-card-text>
-                  Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+                  Provide the name for this Api
                 </v-card-text>
 
                 <v-divider />
@@ -63,7 +63,14 @@
                 </v-card-title>
 
                 <v-card-text>
-                  Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+                  Register all the endpoints of this Api.<br>
+                  Any number of Apis can be registered. Add the paths to the id and location by expanding the input fields by pressing the corresponding icons. Id path will enable event stream creation, location paths will enable spatial fragmentation. Mapping cannot be done until the endpoints are verified<br>
+                  <v-icon>mdi-check-circle-outline</v-icon> Fetch the endpoint data and validate the URLS<br>
+                  <v-icon>mdi-check-circle</v-icon> Data is successfully fetched<br>
+                  <v-icon>mdi-view-stream-outline</v-icon> Open event stream fields<br>
+                  <v-icon>mdi-map-marker</v-icon> Open spatial fragmenting fields<br>
+                  <v-icon>mdi-lock</v-icon> Add request parameters<br>
+                  <v-icon>mdi-file-document-outline</v-icon> See response data<br>
                 </v-card-text>
 
                 <v-divider />
@@ -113,7 +120,13 @@
                 </v-card-title>
 
                 <v-card-text>
-                  Information about mapping
+                  Create the mapping<br>
+                  Select the RML via text, YARRRML via text or RML via form method. When using the former to provide the mapping via text. When using the latter provide the paths to the corresponding properties in your data<br>
+                  <v-icon>mdi-map-outline</v-icon> Select mapping method<br>
+                  <v-icon>mdi-check-circle-outline</v-icon> Validate mapping<br>
+                  <v-icon>mdi-check-circle</v-icon> Mapping is successfully validated<br>
+                  <v-icon>mdi-alert-circle-check</v-icon> Mappings is not successfully validated, press to see validation report<br>
+                  <v-icon>mdi-alpha-s-box</v-icon> See SHACL shape<br>
                 </v-card-text>
 
                 <v-divider />

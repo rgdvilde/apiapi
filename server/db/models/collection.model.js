@@ -44,6 +44,11 @@ const CollectionSchema = mongoose.Schema({
     required: false,
     default: 300
   },
+  pageSize: {
+    type: Number,
+    required: false,
+    default: 100
+  },
   apis: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Api' }],
   uploads: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Upload' }],
   model: {
@@ -53,7 +58,7 @@ const CollectionSchema = mongoose.Schema({
   }
 })
 
-const PAGESIZE = 100
+const PAGESIZE = this.pageSize ? this.pageSize : 100
 
 CollectionSchema.methods.invokeApis = function invokeCollectionApis () {
   return DataModelModel.findById(this.model)
@@ -114,8 +119,8 @@ CollectionSchema.methods.getApiStreams = async function getCollectionApiStreams 
           pageUrl = this.base + '/api/data/' + this._id + '/' + page + '/stream' + (xyz ? '/' + z + '/' + x + '/' + y : '')
           if (page < maxPage) {
             maxCacheAge = this.maxCacheAge
-            // const cachedResponse = await RedisService.getData(pageUrl)
-            const cachedResponse = false
+            const cachedResponse = await RedisService.getData(pageUrl)
+            // const cachedResponse = false
             if (cachedResponse) {
               const ttl = await RedisService.getTTL(pageUrl)
               // maxCacheAge = ttl
