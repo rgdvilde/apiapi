@@ -305,7 +305,7 @@ const constructMeta = (collection, model, data, page, x, y, z) => {
           {
             '@type': 'tree:LessThanOrEqualRelation',
             'tree:node': previousPageURI,
-            'sh:path': {
+            'tree:path': {
               '@list': ['prov:generatedAtTime']
             },
             'tree:value': new Date(timeMM[0]).toISOString(),
@@ -322,7 +322,7 @@ const constructMeta = (collection, model, data, page, x, y, z) => {
           {
             '@type': 'tree:GreaterThanOrEqualThanRelation',
             'tree:node': nextPageURI,
-            'sh:path': {
+            'tree:path': {
               '@list': ['prov:generatedAtTime']
             },
             'tree:value': new Date(timeMM[1]).toISOString(),
@@ -349,28 +349,28 @@ const constructMeta = (collection, model, data, page, x, y, z) => {
           {
             '@type': 'tree:LessThanRelation',
             'tree:node': traverseNodeIdBase + z + '/' + (x - 1) + '/' + y,
-            'sh:path': parsedShaclLonPath,
+            'tree:path': parsedShaclLonPath,
             'tree:value': cordinates['00'][0],
             'tree:remainingItems': resultMap.lessLon
           },
           {
             '@type': 'tree:GreaterThanRelation',
             'tree:node': traverseNodeIdBase + z + '/' + (x + 1) + '/' + y,
-            'sh:path': parsedShaclLonPath,
+            'tree:path': parsedShaclLonPath,
             'tree:value': cordinates['10'][0],
             'tree:remainingItems': resultMap.greaterLon
           },
           {
             '@type': 'tree:LessThanRelation',
             'tree:node': traverseNodeIdBase + z + '/' + x + '/' + (y + 1),
-            'sh:path': parsedShaclLatPath,
+            'tree:path': parsedShaclLatPath,
             'tree:value': cordinates['00'][1],
             'tree:remainingItems': resultMap.lessLat
           },
           {
             '@type': 'tree:GreaterThanRelation',
             'tree:node': traverseNodeIdBase + z + '/' + x + '/' + (y - 1),
-            'sh:path': parsedShaclLatPath,
+            'tree:path': parsedShaclLatPath,
             'tree:value': cordinates['01'][1],
             'tree:remainingItems': resultMap.greaterLat
           }
